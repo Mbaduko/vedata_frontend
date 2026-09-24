@@ -162,6 +162,7 @@ export interface DashboardData {
   }>;
   dueVaccinations?: Array<{
     id: string;
+    animalId: string;
     animalTag: string;
     animalSpecies: string;
     ownerName: string;
@@ -225,9 +226,106 @@ export const dashboardApi = {
     }>('/dashboard/permissions'),
 };
 
+// Zone API
+export interface Zone {
+  id: string;
+  name: string;
+  label: string;
+  parentZoneId: string | null;
+  leadVetId: string | null;
+  technicianGracePeriodHours: number;
+  inviteExpiryHours: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  leadVet?: { id: string; name: string; email: string };
+  parentZone?: { id: string; name: string; label: string };
+  _count?: { animals: number; owners: number; childZones: number };
+}
+
+export const zoneApi = {
+  getZones: (params?: { page?: number; limit?: number; search?: string }) =>
+    request<{ data: Zone[]; meta: any }>('/zones?' + new URLSearchParams(params as any).toString()),
+  getZone: (id: string) => request<Zone>(`/zones/${id}`),
+  createZone: (data: Partial<Zone>) => request<Zone>('/zones', { method: 'POST', body: JSON.stringify(data) }),
+  updateZone: (id: string, data: Partial<Zone>) =>
+    request<Zone>(`/zones/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  moveZone: (id: string, newParentId: string | null) =>
+    request<Zone>(`/zones/${id}/move`, { method: 'POST', body: JSON.stringify({ newParentId }) }),
+  archiveZone: (id: string) => request<Zone>(`/zones/${id}/archive`, { method: 'POST' }),
+};
+
+// Species API
+export interface Species {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { breeds: number; animals: number };
+  breeds?: Breed[];
+}
+
+export interface Breed {
+  id: string;
+  name: string;
+  speciesId: string;
+  createdAt: string;
+  updatedAt: string;
+  species?: { name: string };
+}
+
+export const speciesApi = {
+  getSpecies: () => request<Species[]>('/species'),
+  getSpeciesById: (id: string) => request<Species>(`/species/${id}`),
+  createSpecies: (data: { name: string }) =>
+    request<Species>('/species', { method: 'POST', body: JSON.stringify(data) }),
+  updateSpecies: (id: string, data: { name: string }) =>
+    request<Species>(`/species/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteSpecies: (id: string) => request<void>(`/species/${id}`, { method: 'DELETE' }),
+  createBreed: (data: { speciesId: string; name: string }) =>
+    request<Breed>('/species/breeds', { method: 'POST', body: JSON.stringify(data) }),
+  updateBreed: (id: string, data: { name: string }) =>
+    request<Breed>(`/species/breeds/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteBreed: (id: string) => request<void>(`/species/breeds/${id}`, { method: 'DELETE' }),
+};
+
+// User API (admin)
+export type UserRecord = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt?: string;
+  zoneRoles?: Array<{
+    id: string;
+    zoneId: string;
+    role: string;
+    isLead: boolean;
+    status: string;
+    zone?: { id: string; name: string };
+  }>;
+}
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password?: string;
+  role: string;
+}
+
+export const userApi = {
+  getUsers: (params?: { page?: number; limit?: number; search?: string }) =>
+    request<UserRecord[]>('/users?' + new URLSearchParams((params ?? { limit: 100 }) as Record<string, string>).toString()),
+  createUser: (data: CreateUserPayload) =>
+    request<UserRecord>('/users', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 // Export the base request function for other API modules
 export { request, ApiError };
 export default {
   auth: authApi,
   dashboard: dashboardApi,
+  zones: zoneApi,
+  species: speciesApi,
 };

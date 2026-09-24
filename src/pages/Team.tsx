@@ -1,14 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useData, useDispatch } from '../context/DataContext';
-import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Mail, Calendar } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Users, Plus, Mail } from 'lucide-react';
 
 export default function Team() {
   const { currentUser, users, zones, invitations } = useData();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteForm, setInviteForm] = useState<Record<string, unknown>>({
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Dashboard quick action: /team?invite=1 opens the invite form directly.
+  useEffect(() => {
+    if (searchParams.get('invite')) {
+      setShowInvite(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+  const [inviteForm, setInviteForm] = useState({
     email: '',
     zoneId: currentUser?.zoneRoles?.find(zr => zr.isLead)?.zoneId || '',
     contractStart: '',

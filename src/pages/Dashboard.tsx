@@ -4,6 +4,7 @@ import { dashboardApi, type DashboardData } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   TrendingUp,
+  TrendingDown,
   Users,
   Dog,
   Syringe,
@@ -16,8 +17,17 @@ import {
   XCircle,
   Loader,
   ArrowRight,
+  ArrowUpRight,
   Plus,
   UserPlus,
+  Calendar,
+  Target,
+  Award,
+  Zap,
+  BarChart3,
+  RefreshCw,
+  ExternalLink,
+  ChevronRight,
 } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
@@ -32,6 +42,7 @@ export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -51,54 +62,103 @@ export default function Dashboard() {
     }
   };
 
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      const data = await dashboardApi.getDashboard();
+      setDashboard(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader size={32} className="text-brand animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader size={40} className="text-brand animate-spin" />
+        <p className="text-ink-secondary">Loading your dashboard...</p>
       </div>
     );
   }
 
   if (error || !dashboard) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <AlertCircle size={48} className="text-red-500" />
-        <p className="text-ink-secondary">{error || 'Failed to load dashboard'}</p>
-        <button
-          onClick={loadDashboard}
-          className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90"
-        >
-          Retry
-        </button>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+          <AlertCircle size={32} className="text-red-600 dark:text-red-400" />
+        </div>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-ink mb-1">Unable to Load Dashboard</h3>
+          <p className="text-ink-secondary mb-4">{error || 'An unexpected error occurred'}</p>
+          <button
+            onClick={loadDashboard}
+            className="px-6 py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-display font-bold text-ink">
-          Welcome back, {dashboard.user.name}
-        </h1>
-        <p className="text-ink-secondary mt-1 capitalize">{dashboard.user.role}</p>
+      {/* Header with Welcome & Refresh */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-ink flex items-center gap-3">
+            Welcome back, {dashboard.user.name}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-bg text-brand-text rounded-full text-sm font-medium capitalize">
+              <Award size={14} />
+              {dashboard.user.role}
+            </span>
+          </h1>
+          <p className="text-ink-secondary mt-2 flex items-center gap-2">
+            <Calendar size={16} />
+            {new Date().toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border rounded-lg hover:border-brand/30 transition-all text-ink-secondary hover:text-ink disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+          <span className="text-sm font-medium">Refresh</span>
+        </button>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions Bar */}
       {dashboard.quickActions.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-ink mb-3">Quick Actions</h2>
-          <div className="flex flex-wrap gap-2">
+        <div className="bg-gradient-to-br from-brand to-brand/80 rounded-xl p-6 shadow-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={20} className="text-white" />
+            <h2 className="text-lg font-semibold text-white">Quick Actions</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {dashboard.quickActions.map((action) => {
               const Icon = iconMap[action.icon] || Plus;
               return (
                 <Link
                   key={action.path}
                   to={action.path}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium"
+                  className="flex items-center gap-3 px-4 py-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-all text-white group"
                 >
-                  <Icon size={16} />
-                  {action.label}
+                  <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                    <Icon size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{action.label}</p>
+                    <p className="text-xs text-white/70">Click to start</p>
+                  </div>
+                  <ChevronRight size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               );
             })}
@@ -106,60 +166,85 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Dynamic Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Main Metrics Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* System Metrics - Superadmin */}
         {dashboard.widgets.includes('system-metrics') && dashboard.metrics.system && (
           <SystemMetricsWidget metrics={dashboard.metrics.system} />
         )}
 
+        {/* Zone Metrics - Vet */}
         {dashboard.widgets.includes('zone-metrics') && dashboard.metrics.zone && (
           <ZoneMetricsWidget metrics={dashboard.metrics.zone} />
         )}
 
+        {/* Personal Metrics - All */}
         {dashboard.widgets.includes('my-metrics') && dashboard.metrics.personal && (
           <PersonalMetricsWidget metrics={dashboard.metrics.personal} />
         )}
       </div>
 
-      {/* Full Width Widgets */}
-      <div className="space-y-6">
-        {dashboard.widgets.includes('due-vaccinations') && dashboard.dueVaccinations && (
-          <DueVaccinationsWidget vaccinations={dashboard.dueVaccinations} />
-        )}
+      {/* Content Grid - Full Width Widgets */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Left Column - 2/3 width */}
+        <div className="xl:col-span-2 space-y-6">
+          {dashboard.widgets.includes('due-vaccinations') && dashboard.dueVaccinations && (
+            <DueVaccinationsWidget vaccinations={dashboard.dueVaccinations} />
+          )}
 
-        {dashboard.widgets.includes('recent-audit') && dashboard.recentActivity && (
-          <RecentAuditWidget activities={dashboard.recentActivity} />
-        )}
+          {dashboard.widgets.includes('recent-entries') && dashboard.recentEntries && (
+            <RecentEntriesWidget entries={dashboard.recentEntries} />
+          )}
 
-        {dashboard.widgets.includes('recent-entries') && dashboard.recentEntries && (
-          <RecentEntriesWidget entries={dashboard.recentEntries} />
-        )}
+          {dashboard.widgets.includes('zone-list') && dashboard.zones && (
+            <ZoneListWidget zones={dashboard.zones} />
+          )}
+        </div>
 
-        {dashboard.widgets.includes('zone-list') && dashboard.zones && (
-          <ZoneListWidget zones={dashboard.zones} />
-        )}
+        {/* Right Column - 1/3 width */}
+        <div className="space-y-6">
+          {dashboard.widgets.includes('recent-audit') && dashboard.recentActivity && (
+            <RecentAuditWidget activities={dashboard.recentActivity} />
+          )}
 
-        {dashboard.widgets.includes('team-activity') && dashboard.teamMembers && (
-          <TeamActivityWidget members={dashboard.teamMembers} />
-        )}
+          {dashboard.widgets.includes('team-activity') && dashboard.teamMembers && (
+            <TeamActivityWidget members={dashboard.teamMembers} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
+// ========== WIDGETS ==========
+
 // System Metrics Widget (Superadmin)
 function SystemMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['metrics']['system']> }) {
+  const stats = [
+    { icon: MapPin, label: 'Total Zones', value: metrics.totalZones, color: 'blue', trend: '+12%' },
+    { icon: Users, label: 'Active Users', value: metrics.totalUsers, color: 'green', trend: '+5%' },
+    { icon: Dog, label: 'Registered Animals', value: metrics.totalAnimals, color: 'purple', trend: '+18%' },
+    { icon: Syringe, label: 'Vaccinations', value: metrics.totalVaccinations, color: 'orange', trend: '+23%' },
+  ];
+
   return (
-    <div className="bg-card border border-border rounded-xl p-6 col-span-full">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp size={20} className="text-brand" />
-        <h2 className="text-lg font-semibold text-ink">System Overview</h2>
+    <div className="lg:col-span-3 bg-card border border-border rounded-xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <BarChart3 size={20} className="text-brand" />
+          <h2 className="text-lg font-semibold text-ink">System Overview</h2>
+        </div>
+        <Link 
+          to="/audit-log" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
+          View Details <ExternalLink size={14} />
+        </Link>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard icon={MapPin} label="Zones" value={metrics.totalZones} color="blue" />
-        <MetricCard icon={Users} label="Users" value={metrics.totalUsers} color="green" />
-        <MetricCard icon={Dog} label="Animals" value={metrics.totalAnimals} color="purple" />
-        <MetricCard icon={Syringe} label="Vaccinations" value={metrics.totalVaccinations} color="orange" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <MetricCard key={stat.label} {...stat} />
+        ))}
       </div>
     </div>
   );
@@ -167,38 +252,74 @@ function SystemMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['
 
 // Zone Metrics Widget (Vet)
 function ZoneMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['metrics']['zone']> }) {
+  const stats = [
+    { icon: MapPin, label: 'Zones Managed', value: metrics.zonesManaged, color: 'blue' },
+    { icon: Dog, label: 'Animals', value: metrics.totalAnimals, color: 'purple' },
+    { icon: Syringe, label: 'Vaccinations', value: metrics.totalVaccinations, color: 'orange' },
+    { icon: Users, label: 'Owners', value: metrics.totalOwners, color: 'green' },
+  ];
+
   return (
-    <div className="bg-card border border-border rounded-xl p-6 col-span-full lg:col-span-2">
-      <div className="flex items-center gap-2 mb-4">
-        <MapPin size={20} className="text-brand" />
-        <h2 className="text-lg font-semibold text-ink">Your Zones</h2>
+    <div className="lg:col-span-3 bg-card border border-border rounded-xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Target size={20} className="text-brand" />
+          <h2 className="text-lg font-semibold text-ink">Zone Performance</h2>
+        </div>
+        <Link 
+          to="/zones" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
+          Manage Zones <ArrowRight size={14} />
+        </Link>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard icon={MapPin} label="Zones Managed" value={metrics.zonesManaged} color="blue" />
-        <MetricCard icon={Dog} label="Animals" value={metrics.totalAnimals} color="purple" />
-        <MetricCard icon={Syringe} label="Vaccinations" value={metrics.totalVaccinations} color="orange" />
-        <MetricCard icon={Users} label="Owners" value={metrics.totalOwners} color="green" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <MetricCard key={stat.label} {...stat} />
+        ))}
       </div>
     </div>
   );
 }
 
-// Personal Metrics Widget (All users)
+// Personal Metrics Widget
 function PersonalMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['metrics']['personal']> }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-6 col-span-full lg:col-span-1">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity size={20} className="text-brand" />
-        <h2 className="text-lg font-semibold text-ink">My Activity</h2>
-      </div>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-ink-secondary">Animals Registered</span>
-          <span className="text-2xl font-bold text-ink">{metrics.animalsRegistered}</span>
+    <div className="lg:col-span-3 bg-card border border-border rounded-xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Activity size={20} className="text-brand" />
+          <h2 className="text-lg font-semibold text-ink">My Contributions</h2>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-ink-secondary">Vaccinations Recorded</span>
-          <span className="text-2xl font-bold text-ink">{metrics.vaccinationsRecorded}</span>
+        <Link 
+          to="/my-activity" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
+          View Activity <ArrowRight size={14} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Dog size={18} className="text-purple-600 dark:text-purple-400" />
+            <span className="text-sm text-ink-secondary">Animals Registered</span>
+          </div>
+          <p className="text-3xl font-bold text-ink">{metrics.animalsRegistered}</p>
+          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+            <TrendingUp size={14} />
+            <span>This month</span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Syringe size={18} className="text-orange-600 dark:text-orange-400" />
+            <span className="text-sm text-ink-secondary">Vaccinations Recorded</span>
+          </div>
+          <p className="text-3xl font-bold text-ink">{metrics.vaccinationsRecorded}</p>
+          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+            <TrendingUp size={14} />
+            <span>This month</span>
+          </div>
         </div>
       </div>
     </div>
@@ -206,7 +327,19 @@ function PersonalMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData
 }
 
 // Metric Card Component
-function MetricCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+function MetricCard({ 
+  icon: Icon, 
+  label, 
+  value, 
+  color, 
+  trend 
+}: { 
+  icon: any; 
+  label: string; 
+  value: number; 
+  color: string; 
+  trend?: string;
+}) {
   const colorClasses: Record<string, string> = {
     blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
     green: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400',
@@ -215,13 +348,20 @@ function MetricCard({ icon: Icon, label, value, color }: { icon: any; label: str
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-ink">{value.toLocaleString()}</p>
-        <p className="text-xs text-ink-secondary">{label}</p>
+    <div className="relative group">
+      <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="relative p-4 rounded-lg border border-transparent group-hover:border-brand/20 transition-colors">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${colorClasses[color]}`}>
+          <Icon size={24} />
+        </div>
+        <p className="text-2xl font-bold text-ink mb-1">{value.toLocaleString()}</p>
+        <p className="text-xs text-ink-secondary mb-1">{label}</p>
+        {trend && (
+          <div className="flex items-center gap-1">
+            <TrendingUp size={12} className="text-green-600 dark:text-green-400" />
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">{trend}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -236,13 +376,18 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
           <Syringe size={20} className="text-brand" />
           <h2 className="text-lg font-semibold text-ink">Due Vaccinations</h2>
         </div>
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <CheckCircle size={48} className="text-green-500 mb-3" />
-          <p className="text-ink-secondary">All vaccinations up to date!</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center mb-4">
+            <CheckCircle size={32} className="text-green-600 dark:text-green-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-ink mb-1">All Up to Date!</h3>
+          <p className="text-ink-secondary">No vaccinations due in the next 30 days</p>
         </div>
       </div>
     );
   }
+
+  const overdueCount = vaccinations.filter(v => v.isDue).length;
 
   return (
     <div className="bg-card border border-border rounded-xl p-6">
@@ -250,26 +395,34 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
         <div className="flex items-center gap-2">
           <Syringe size={20} className="text-brand" />
           <h2 className="text-lg font-semibold text-ink">Due Vaccinations</h2>
+          {overdueCount > 0 && (
+            <span className="px-2 py-0.5 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs font-medium rounded-full">
+              {overdueCount} Overdue
+            </span>
+          )}
         </div>
-        <Link to="/vaccinations/due" className="text-sm text-brand hover:underline flex items-center gap-1">
+        <Link 
+          to="/vaccinations/due" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
           View All <ArrowRight size={14} />
         </Link>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto -mx-6 px-6">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Animal</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Owner</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Zone</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Vaccine</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Due Date</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Status</th>
+              <th className="text-left py-3 px-3 text-xs font-medium text-ink-secondary uppercase tracking-wide">Animal</th>
+              <th className="text-left py-3 px-3 text-xs font-medium text-ink-secondary uppercase tracking-wide">Owner</th>
+              <th className="text-left py-3 px-3 text-xs font-medium text-ink-secondary uppercase tracking-wide">Zone</th>
+              <th className="text-left py-3 px-3 text-xs font-medium text-ink-secondary uppercase tracking-wide">Vaccine</th>
+              <th className="text-left py-3 px-3 text-xs font-medium text-ink-secondary uppercase tracking-wide">Due Date</th>
+              <th className="text-left py-3 px-3 text-xs font-medium text-ink-secondary uppercase tracking-wide">Status</th>
             </tr>
           </thead>
           <tbody>
-            {vaccinations.slice(0, 10).map((vac) => (
-              <tr key={vac.id} className="border-b border-border hover:bg-bg">
+            {vaccinations.slice(0, 5).map((vac) => (
+              <tr key={vac.id} className="border-b border-border last:border-0 hover:bg-bg transition-colors">
                 <td className="py-3 px-3">
                   <div>
                     <p className="text-sm font-medium text-ink">{vac.animalTag}</p>
@@ -294,11 +447,11 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
                 </td>
                 <td className="py-3 px-3">
                   {vac.isDue ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs rounded-full">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs font-medium rounded-full">
                       <AlertCircle size={12} /> Overdue
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs rounded-full">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs font-medium rounded-full">
                       <Clock size={12} /> Upcoming
                     </span>
                   )}
@@ -314,6 +467,13 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
 
 // Recent Audit Widget
 function RecentAuditWidget({ activities }: { activities: NonNullable<DashboardData['recentActivity']> }) {
+  const getActionIcon = (action: string) => {
+    if (action.includes('create')) return Plus;
+    if (action.includes('update')) return RefreshCw;
+    if (action.includes('delete')) return XCircle;
+    return Activity;
+  };
+
   return (
     <div className="bg-card border border-border rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
@@ -321,33 +481,38 @@ function RecentAuditWidget({ activities }: { activities: NonNullable<DashboardDa
           <FileText size={20} className="text-brand" />
           <h2 className="text-lg font-semibold text-ink">Recent Activity</h2>
         </div>
-        <Link to="/audit-log" className="text-sm text-brand hover:underline flex items-center gap-1">
+        <Link 
+          to="/audit-log" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
           View All <ArrowRight size={14} />
         </Link>
       </div>
       <div className="space-y-3">
-        {activities.map((activity) => (
-          <div key={activity.id} className="flex items-start gap-3 p-3 bg-bg rounded-lg">
-            <div className="w-2 h-2 rounded-full bg-brand mt-2" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-ink">
-                <span className="font-medium">{activity.user}</span>{' '}
-                <span className="text-ink-secondary">{activity.action.replace('.', ' ')}</span>
-              </p>
-              <div className="flex items-center gap-2 mt-1 text-xs text-ink-secondary">
-                <span className="capitalize">{activity.userRole}</span>
-                {activity.zone && (
-                  <>
-                    <span>•</span>
-                    <span>{activity.zone}</span>
-                  </>
-                )}
-                <span>•</span>
-                <span>{new Date(activity.timestamp).toLocaleString()}</span>
+        {activities.slice(0, 8).map((activity) => {
+          const ActionIcon = getActionIcon(activity.action);
+          return (
+            <div key={activity.id} className="flex items-start gap-3 p-3 bg-bg rounded-lg hover:border-brand/20 border border-transparent transition-all">
+              <div className="w-8 h-8 rounded-lg bg-brand-bg flex items-center justify-center flex-shrink-0">
+                <ActionIcon size={16} className="text-brand-text" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-ink">
+                  <span className="font-medium">{activity.user}</span>{' '}
+                  <span className="text-ink-secondary">
+                    {activity.action.split('.').join(' ')}
+                  </span>
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-ink-secondary">
+                  <span className="capitalize px-2 py-0.5 bg-bg border border-border rounded">{activity.userRole}</span>
+                  {activity.zone && <span>{activity.zone}</span>}
+                  <span>•</span>
+                  <span>{new Date(activity.timestamp).toLocaleString()}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -357,58 +522,51 @@ function RecentAuditWidget({ activities }: { activities: NonNullable<DashboardDa
 function RecentEntriesWidget({ entries }: { entries: NonNullable<DashboardData['recentEntries']> }) {
   return (
     <div className="bg-card border border-border rounded-xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity size={20} className="text-brand" />
-        <h2 className="text-lg font-semibold text-ink">My Recent Entries</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Activity size={20} className="text-brand" />
+          <h2 className="text-lg font-semibold text-ink">My Recent Entries</h2>
+        </div>
+        <Link 
+          to="/my-activity" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
+          View All <ArrowRight size={14} />
+        </Link>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Tag</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Species</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Owner</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Zone</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Registered</th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-ink-secondary">Editable Until</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => {
-              const isEditable = entry.editableUntil && new Date(entry.editableUntil) > new Date();
-              return (
-                <tr key={entry.id} className="border-b border-border hover:bg-bg">
-                  <td className="py-3 px-3">
-                    <Link to={`/animals/${entry.id}`} className="text-sm font-medium text-brand hover:underline">
-                      {entry.tagNumber}
-                    </Link>
-                  </td>
-                  <td className="py-3 px-3 text-sm text-ink">{entry.species}</td>
-                  <td className="py-3 px-3 text-sm text-ink">{entry.owner}</td>
-                  <td className="py-3 px-3 text-sm text-ink">{entry.zone}</td>
-                  <td className="py-3 px-3 text-sm text-ink-secondary">
-                    {new Date(entry.registeredAt).toLocaleDateString()}
-                  </td>
-                  <td className="py-3 px-3">
-                    {entry.editableUntil ? (
-                      isEditable ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 text-xs rounded-full">
-                          <Clock size={12} /> {new Date(entry.editableUntil).toLocaleString()}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs rounded-full">
-                          <XCircle size={12} /> Expired
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-xs text-ink-secondary">—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="space-y-3">
+        {entries.map((entry) => {
+          const isEditable = entry.editableUntil && new Date(entry.editableUntil) > new Date();
+          return (
+            <Link
+              key={entry.id}
+              to={`/animals/${entry.id}`}
+              className="block p-4 bg-bg rounded-lg hover:border-brand/30 border border-transparent transition-all group"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-sm font-medium text-brand group-hover:underline">{entry.tagNumber}</p>
+                  <p className="text-xs text-ink-secondary mt-0.5">{entry.species} • {entry.zone}</p>
+                </div>
+                {entry.editableUntil && (
+                  isEditable ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 text-xs font-medium rounded-full">
+                      <Clock size={12} /> Editable
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs font-medium rounded-full">
+                      <XCircle size={12} /> Locked
+                    </span>
+                  )
+                )}
+              </div>
+              <div className="flex items-center justify-between text-xs text-ink-secondary">
+                <span>Owner: {entry.owner}</span>
+                <span>{new Date(entry.registeredAt).toLocaleDateString()}</span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -423,25 +581,39 @@ function ZoneListWidget({ zones }: { zones: NonNullable<DashboardData['zones']> 
           <MapPin size={20} className="text-brand" />
           <h2 className="text-lg font-semibold text-ink">Your Zones</h2>
         </div>
-        <Link to="/zones" className="text-sm text-brand hover:underline flex items-center gap-1">
+        <Link 
+          to="/zones" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
           View All <ArrowRight size={14} />
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {zones.map((zone) => (
+        {zones.slice(0, 6).map((zone) => (
           <Link
             key={zone.id}
             to={`/zones/${zone.id}`}
-            className="p-4 bg-bg rounded-lg hover:border-brand/30 border border-transparent transition-colors"
+            className="p-4 bg-bg rounded-lg hover:border-brand/30 border border-transparent transition-all group"
           >
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-medium text-ink">{zone.name}</h3>
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-medium text-ink group-hover:text-brand transition-colors">{zone.name}</h3>
               <span className="text-xs px-2 py-1 bg-brand-bg text-brand-text rounded-full">{zone.label}</span>
             </div>
-            {zone.leadVet && <p className="text-sm text-ink-secondary mb-3">Lead: {zone.leadVet}</p>}
-            <div className="flex items-center gap-4 text-xs text-ink-secondary">
-              <span>{zone.animalCount} animals</span>
-              <span>{zone.ownerCount} owners</span>
+            {zone.leadVet && (
+              <p className="text-sm text-ink-secondary mb-3 flex items-center gap-1.5">
+                <Users size={14} />
+                {zone.leadVet}
+              </p>
+            )}
+            <div className="flex items-center gap-4 text-xs text-ink-secondary pt-3 border-t border-border">
+              <span className="flex items-center gap-1">
+                <Dog size={12} />
+                {zone.animalCount}
+              </span>
+              <span className="flex items-center gap-1">
+                <Users size={12} />
+                {zone.ownerCount}
+              </span>
             </div>
           </Link>
         ))}
@@ -459,40 +631,48 @@ function TeamActivityWidget({ members }: { members: NonNullable<DashboardData['t
           <Users size={20} className="text-brand" />
           <h2 className="text-lg font-semibold text-ink">Team Members</h2>
         </div>
-        <Link to="/team" className="text-sm text-brand hover:underline flex items-center gap-1">
-          View All <ArrowRight size={14} />
+        <Link 
+          to="/team" 
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
+          Manage <ArrowRight size={14} />
         </Link>
       </div>
       <div className="space-y-3">
-        {members.map((member) => {
+        {members.slice(0, 6).map((member) => {
           const daysRemaining = member.contractEnd
             ? Math.ceil((new Date(member.contractEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             : null;
           const isExpiringSoon = daysRemaining !== null && daysRemaining > 0 && daysRemaining <= 30;
+          const isExpired = daysRemaining !== null && daysRemaining <= 0;
 
           return (
             <Link
               key={member.id}
               to={`/team/${member.id}`}
-              className="flex items-center justify-between p-3 bg-bg rounded-lg hover:border-brand/30 border border-transparent transition-colors"
+              className="flex items-center gap-3 p-3 bg-bg rounded-lg hover:border-brand/20 border border-transparent transition-all group"
             >
-              <div>
-                <p className="text-sm font-medium text-ink">{member.name}</p>
-                <p className="text-xs text-ink-secondary">{member.email}</p>
-                <p className="text-xs text-ink-secondary mt-1">{member.zone}</p>
+              <div className="w-10 h-10 rounded-full bg-brand-bg flex items-center justify-center text-brand-text font-semibold flex-shrink-0">
+                {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ink group-hover:text-brand transition-colors truncate">
+                  {member.name}
+                </p>
+                <p className="text-xs text-ink-secondary truncate">{member.zone}</p>
               </div>
               {member.contractEnd && (
-                <div className="text-right">
-                  {isExpiringSoon ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs rounded-full">
-                      <AlertCircle size={12} /> {daysRemaining} days left
+                <div className="flex-shrink-0">
+                  {isExpired ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs font-medium rounded-full">
+                      <XCircle size={10} /> Expired
                     </span>
-                  ) : daysRemaining && daysRemaining > 0 ? (
-                    <span className="text-xs text-ink-secondary">{daysRemaining} days remaining</span>
+                  ) : isExpiringSoon ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs font-medium rounded-full">
+                      <Clock size={10} /> {daysRemaining}d
+                    </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs rounded-full">
-                      <XCircle size={12} /> Expired
-                    </span>
+                    <span className="text-xs text-ink-secondary">{daysRemaining}d</span>
                   )}
                 </div>
               )}

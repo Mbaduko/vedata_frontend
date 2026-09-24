@@ -125,6 +125,8 @@ export interface Invitation {
   zoneId: string;
   status: 'pending' | 'accepted' | 'expired';
   expiresAt: string;
+  contractStart?: string;
+  contractEnd?: string;
 }
 
 // ─── Audit Log ────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import {
   Shield, Stethoscope, Wrench, LogOut, Sun, Moon, Menu, X,
   AlertCircle, Activity, Loader, type LucideIcon
 } from 'lucide-react';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 // Pages
 import Login from './pages/Login';
@@ -211,15 +211,15 @@ function AppRoutes() {
       <Route path="/dashboard" element={<RequireAuth><Layout><Dashboard /></Layout></RequireAuth>} />
       <Route path="/zones" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><Zones /></Layout></RequireAuth>} />
       <Route path="/zones/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><ZoneDetail /></Layout></RequireAuth>} />
-      <Route path="/animals" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><Animals /></Layout></RequireAuth>} />
-      <Route path="/animals/register" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><AnimalRegister /></Layout></RequireAuth>} />
-      <Route path="/animals/:id" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><AnimalDetail /></Layout></RequireAuth>} />
-      <Route path="/owners" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><Owners /></Layout></RequireAuth>} />
-      <Route path="/owners/:id" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><OwnerDetail /></Layout></RequireAuth>} />
-      <Route path="/vaccinations/record" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><VaccinationRecord /></Layout></RequireAuth>} />
-      <Route path="/vaccinations/due" element={<RequireAuth allowedRoles={['vet', 'technician']}><Layout><VaccinationsDue /></Layout></RequireAuth>} />
-      <Route path="/team" element={<RequireAuth allowedRoles={['vet']}><Layout><Team /></Layout></RequireAuth>} />
-      <Route path="/team/:id" element={<RequireAuth allowedRoles={['vet']}><Layout><TechnicianDetail /></Layout></RequireAuth>} />
+      <Route path="/animals" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><Animals /></Layout></RequireAuth>} />
+      <Route path="/animals/register" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><AnimalRegister /></Layout></RequireAuth>} />
+      <Route path="/animals/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><AnimalDetail /></Layout></RequireAuth>} />
+      <Route path="/owners" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><Owners /></Layout></RequireAuth>} />
+      <Route path="/owners/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><OwnerDetail /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/record" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationRecord /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/due" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationsDue /></Layout></RequireAuth>} />
+      <Route path="/team" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><Team /></Layout></RequireAuth>} />
+      <Route path="/team/:id" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><TechnicianDetail /></Layout></RequireAuth>} />
       <Route path="/my-activity" element={<RequireAuth allowedRoles={['technician']}><Layout><MyActivity /></Layout></RequireAuth>} />
       <Route path="/config/diseases" element={<RequireAuth allowedRoles={['superadmin']}><Layout><ConfigDiseases /></Layout></RequireAuth>} />
       <Route path="/config/species" element={<RequireAuth allowedRoles={['superadmin']}><Layout><ConfigSpecies /></Layout></RequireAuth>} />

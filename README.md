@@ -18,7 +18,6 @@ React-based web application for the Vedata veterinary data management system.
 src/
 ├── assets/           # Images and static files
 ├── components/       # Reusable components
-│   └── widgets/      # Dashboard widgets
 ├── context/          # Global state management
 │   ├── AuthContext.tsx    # Authentication state
 │   └── DataContext.tsx    # App data (deprecated - use API)
@@ -118,7 +117,7 @@ The app uses JWT-based authentication with HTTP-only cookies:
 ### Components
 
 **Layout:**
-- `DashboardLayout` - Main app layout with sidebar and header
+- `App.tsx` - App shell (sidebar + top bar) wrapping every protected route
 
 **Core:**
 - `DataTable` - Reusable table component
@@ -129,19 +128,11 @@ The app uses JWT-based authentication with HTTP-only cookies:
 - `EmptyState` - Empty state placeholder
 - `ImpactConfirmDialog` - Confirmation dialog for destructive actions
 - `GracePeriodCountdown` - Edit grace period countdown
-- `RollUpToggle` - Zone hierarchy rollup toggle
 - `AnimalOwnerSearch` - Combined search component
 - `CameraCapture` - Photo capture for vaccinations
 
-**Widgets:**
-- `SystemMetricsWidget` - System-wide statistics
-- `MyMetricsWidget` - Personal metrics
-- `ZoneOverviewWidget` - Zone statistics
-- `ZoneMetricCards` - Zone metric cards
-- `RecentEntriesWidget` - Recent activity
-- `DueVaccinationsWidget` - Upcoming vaccinations
-- `TeamActivityWidget` - Team member activity
-- `RecentAuditWidget` - Recent audit entries
+**Dashboard:**
+- `pages/Dashboard.tsx` - The single dynamic dashboard; widgets, metrics, and quick actions are driven per role by `GET /api/v1/dashboard`
 
 ### State Management
 
