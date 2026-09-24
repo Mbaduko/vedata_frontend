@@ -4,10 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vedata_frontend</title>
+    <title>Vedata — Veterinary Data Management</title>
+    <script>
+      // Apply the saved theme before first paint (avoids a flash of the wrong theme).
+      document.documentElement.setAttribute(
+        'data-theme',
+        localStorage.getItem('vedata-theme') || 'light'
+      );
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

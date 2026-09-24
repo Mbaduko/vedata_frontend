@@ -4,7 +4,6 @@ import { dashboardApi, type DashboardData } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   TrendingUp,
-  TrendingDown,
   Users,
   Dog,
   Syringe,
@@ -17,7 +16,6 @@ import {
   XCircle,
   Loader,
   ArrowRight,
-  ArrowUpRight,
   Plus,
   UserPlus,
   Calendar,
@@ -86,15 +84,15 @@ export default function Dashboard() {
   if (error || !dashboard) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-          <AlertCircle size={32} className="text-red-600 dark:text-red-400" />
+        <div className="w-16 h-16 rounded-full bg-danger-bg flex items-center justify-center">
+          <AlertCircle size={32} className="text-danger-text" />
         </div>
         <div className="text-center">
           <h3 className="text-lg font-semibold text-ink mb-1">Unable to Load Dashboard</h3>
           <p className="text-ink-secondary mb-4">{error || 'An unexpected error occurred'}</p>
           <button
             onClick={loadDashboard}
-            className="px-6 py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium"
+            className="px-6 py-2.5 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors font-medium"
           >
             Try Again
           </button>
@@ -139,8 +137,8 @@ export default function Dashboard() {
       {dashboard.quickActions.length > 0 && (
         <div className="bg-gradient-to-br from-brand to-brand/80 rounded-xl p-6 shadow-lg">
           <div className="flex items-center gap-2 mb-4">
-            <Zap size={20} className="text-white" />
-            <h2 className="text-lg font-semibold text-white">Quick Actions</h2>
+            <Zap size={20} className="text-on-brand" />
+            <h2 className="text-lg font-semibold text-on-brand">Quick Actions</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {dashboard.quickActions.map((action) => {
@@ -149,14 +147,14 @@ export default function Dashboard() {
                 <Link
                   key={action.path}
                   to={action.path}
-                  className="flex items-center gap-3 px-4 py-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-all text-white group"
+                  className="flex items-center gap-3 px-4 py-3 bg-on-brand/10 backdrop-blur-sm rounded-lg hover:bg-on-brand/20 transition-all text-on-brand group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-on-brand/20 flex items-center justify-center group-hover:bg-on-brand/30 transition-colors">
                     <Icon size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{action.label}</p>
-                    <p className="text-xs text-white/70">Click to start</p>
+                    <p className="text-xs text-on-brand/70">Click to start</p>
                   </div>
                   <ChevronRight size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
@@ -221,10 +219,10 @@ export default function Dashboard() {
 // System Metrics Widget (Superadmin)
 function SystemMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['metrics']['system']> }) {
   const stats = [
-    { icon: MapPin, label: 'Total Zones', value: metrics.totalZones, color: 'blue', trend: '+12%' },
-    { icon: Users, label: 'Active Users', value: metrics.totalUsers, color: 'green', trend: '+5%' },
-    { icon: Dog, label: 'Registered Animals', value: metrics.totalAnimals, color: 'purple', trend: '+18%' },
-    { icon: Syringe, label: 'Vaccinations', value: metrics.totalVaccinations, color: 'orange', trend: '+23%' },
+    { icon: MapPin, label: 'Total Zones', value: metrics.totalZones, color: 'info' },
+    { icon: Users, label: 'Active Users', value: metrics.totalUsers, color: 'success' },
+    { icon: Dog, label: 'Registered Animals', value: metrics.totalAnimals, color: 'violet' },
+    { icon: Syringe, label: 'Vaccinations', value: metrics.totalVaccinations, color: 'warning' },
   ];
 
   return (
@@ -253,10 +251,10 @@ function SystemMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['
 // Zone Metrics Widget (Vet)
 function ZoneMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData['metrics']['zone']> }) {
   const stats = [
-    { icon: MapPin, label: 'Zones Managed', value: metrics.zonesManaged, color: 'blue' },
-    { icon: Dog, label: 'Animals', value: metrics.totalAnimals, color: 'purple' },
-    { icon: Syringe, label: 'Vaccinations', value: metrics.totalVaccinations, color: 'orange' },
-    { icon: Users, label: 'Owners', value: metrics.totalOwners, color: 'green' },
+    { icon: MapPin, label: 'Zones Managed', value: metrics.zonesManaged, color: 'info' },
+    { icon: Dog, label: 'Animals', value: metrics.totalAnimals, color: 'violet' },
+    { icon: Syringe, label: 'Vaccinations', value: metrics.totalVaccinations, color: 'warning' },
+    { icon: Users, label: 'Owners', value: metrics.totalOwners, color: 'success' },
   ];
 
   return (
@@ -301,22 +299,22 @@ function PersonalMetricsWidget({ metrics }: { metrics: NonNullable<DashboardData
       <div className="grid grid-cols-2 gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Dog size={18} className="text-purple-600 dark:text-purple-400" />
+            <Dog size={18} className="text-violet-text" />
             <span className="text-sm text-ink-secondary">Animals Registered</span>
           </div>
           <p className="text-3xl font-bold text-ink">{metrics.animalsRegistered}</p>
-          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+          <div className="flex items-center gap-1 text-xs text-success-text">
             <TrendingUp size={14} />
             <span>This month</span>
           </div>
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Syringe size={18} className="text-orange-600 dark:text-orange-400" />
+            <Syringe size={18} className="text-warning-text" />
             <span className="text-sm text-ink-secondary">Vaccinations Recorded</span>
           </div>
           <p className="text-3xl font-bold text-ink">{metrics.vaccinationsRecorded}</p>
-          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+          <div className="flex items-center gap-1 text-xs text-success-text">
             <TrendingUp size={14} />
             <span>This month</span>
           </div>
@@ -331,20 +329,18 @@ function MetricCard({
   icon: Icon, 
   label, 
   value, 
-  color, 
-  trend 
+  color 
 }: { 
   icon: any; 
   label: string; 
   value: number; 
-  color: string; 
-  trend?: string;
+  color: string;
 }) {
   const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    green: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400',
-    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
-    orange: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
+    info: 'bg-info-bg text-info-text',
+    success: 'bg-success-bg text-success-text',
+    warning: 'bg-warning-bg text-warning-text',
+    violet: 'bg-violet-bg text-violet-text',
   };
 
   return (
@@ -355,13 +351,7 @@ function MetricCard({
           <Icon size={24} />
         </div>
         <p className="text-2xl font-bold text-ink mb-1">{value.toLocaleString()}</p>
-        <p className="text-xs text-ink-secondary mb-1">{label}</p>
-        {trend && (
-          <div className="flex items-center gap-1">
-            <TrendingUp size={12} className="text-green-600 dark:text-green-400" />
-            <span className="text-xs text-green-600 dark:text-green-400 font-medium">{trend}</span>
-          </div>
-        )}
+        <p className="text-xs text-ink-secondary">{label}</p>
       </div>
     </div>
   );
@@ -377,8 +367,8 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
           <h2 className="text-lg font-semibold text-ink">Due Vaccinations</h2>
         </div>
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center mb-4">
-            <CheckCircle size={32} className="text-green-600 dark:text-green-400" />
+          <div className="w-16 h-16 rounded-full bg-success-bg flex items-center justify-center mb-4">
+            <CheckCircle size={32} className="text-success-text" />
           </div>
           <h3 className="text-lg font-semibold text-ink mb-1">All Up to Date!</h3>
           <p className="text-ink-secondary">No vaccinations due in the next 30 days</p>
@@ -396,7 +386,7 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
           <Syringe size={20} className="text-brand" />
           <h2 className="text-lg font-semibold text-ink">Due Vaccinations</h2>
           {overdueCount > 0 && (
-            <span className="px-2 py-0.5 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs font-medium rounded-full">
+            <span className="px-2 py-0.5 bg-danger-bg text-danger-text text-xs font-medium rounded-full">
               {overdueCount} Overdue
             </span>
           )}
@@ -447,11 +437,11 @@ function DueVaccinationsWidget({ vaccinations }: { vaccinations: NonNullable<Das
                 </td>
                 <td className="py-3 px-3">
                   {vac.isDue ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-danger-bg text-danger-text text-xs font-medium rounded-full">
                       <AlertCircle size={12} /> Overdue
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-warning-bg text-warning-text text-xs font-medium rounded-full">
                       <Clock size={12} /> Upcoming
                     </span>
                   )}
@@ -550,11 +540,11 @@ function RecentEntriesWidget({ entries }: { entries: NonNullable<DashboardData['
                 </div>
                 {entry.editableUntil && (
                   isEditable ? (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-success-bg text-success-text text-xs font-medium rounded-full">
                       <Clock size={12} /> Editable
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted-bg text-muted-text text-xs font-medium rounded-full">
                       <XCircle size={12} /> Locked
                     </span>
                   )
@@ -664,11 +654,11 @@ function TeamActivityWidget({ members }: { members: NonNullable<DashboardData['t
               {member.contractEnd && (
                 <div className="flex-shrink-0">
                   {isExpired ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-danger-bg text-danger-text text-xs font-medium rounded-full">
                       <XCircle size={10} /> Expired
                     </span>
                   ) : isExpiringSoon ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-warning-bg text-warning-text text-xs font-medium rounded-full">
                       <Clock size={10} /> {daysRemaining}d
                     </span>
                   ) : (

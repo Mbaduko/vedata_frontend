@@ -236,7 +236,7 @@ export default function ZoneDetail() {
               </button>
               <button
                 onClick={handleSaveSettings}
-                className="px-4 py-2 text-sm font-medium bg-brand text-white rounded-lg hover:bg-brand/90"
+                className="px-4 py-2 text-sm font-medium bg-brand text-on-brand rounded-lg hover:bg-brand-hover"
               >
                 Save Settings
               </button>

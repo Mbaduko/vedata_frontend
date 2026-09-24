@@ -27,6 +27,9 @@ import MyActivity from './pages/MyActivity';
 import UsersPage from './pages/Users';
 import Roles from './pages/Roles';
 import AuditLog from './pages/AuditLog';
+import AcceptInvite from './pages/AcceptInvite';
+import InviteUser from './pages/InviteUser';
+import Invitations from './pages/Invitations';
 
 // Route guard
 function RequireAuth({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
@@ -80,7 +83,10 @@ function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('vedata-theme');
+    return saved === 'dark' ? 'dark' : 'light';
+  });
 
   const RoleIcon = roleIcons[user?.role ?? ''] ?? Users;
 
@@ -97,6 +103,7 @@ function Layout({ children }: { children: ReactNode }) {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('vedata-theme', newTheme);
   };
 
   return (
@@ -112,7 +119,7 @@ function Layout({ children }: { children: ReactNode }) {
           <div className="p-4 border-b border-border">
             <Link to="/dashboard" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center">
-                <span className="text-white font-bold text-sm">V</span>
+                <span className="text-on-brand font-bold text-sm">V</span>
               </div>
               <span className="text-lg font-display font-semibold text-ink">Vedata</span>
             </Link>
@@ -208,6 +215,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/invite/:token" element={<AcceptInvite />} />
       <Route path="/dashboard" element={<RequireAuth><Layout><Dashboard /></Layout></RequireAuth>} />
       <Route path="/zones" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><Zones /></Layout></RequireAuth>} />
       <Route path="/zones/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><ZoneDetail /></Layout></RequireAuth>} />
@@ -219,11 +227,14 @@ function AppRoutes() {
       <Route path="/vaccinations/record" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationRecord /></Layout></RequireAuth>} />
       <Route path="/vaccinations/due" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationsDue /></Layout></RequireAuth>} />
       <Route path="/team" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><Team /></Layout></RequireAuth>} />
+      <Route path="/team/invite" element={<RequireAuth allowedRoles={['vet']}><Layout><InviteUser /></Layout></RequireAuth>} />
       <Route path="/team/:id" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><TechnicianDetail /></Layout></RequireAuth>} />
       <Route path="/my-activity" element={<RequireAuth allowedRoles={['technician']}><Layout><MyActivity /></Layout></RequireAuth>} />
       <Route path="/config/diseases" element={<RequireAuth allowedRoles={['superadmin']}><Layout><ConfigDiseases /></Layout></RequireAuth>} />
       <Route path="/config/species" element={<RequireAuth allowedRoles={['superadmin']}><Layout><ConfigSpecies /></Layout></RequireAuth>} />
       <Route path="/users" element={<RequireAuth allowedRoles={['superadmin']}><Layout><UsersPage /></Layout></RequireAuth>} />
+      <Route path="/users/invite" element={<RequireAuth allowedRoles={['superadmin']}><Layout><InviteUser /></Layout></RequireAuth>} />
+      <Route path="/users/invitations" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><Invitations /></Layout></RequireAuth>} />
       <Route path="/roles" element={<RequireAuth allowedRoles={['superadmin']}><Layout><Roles /></Layout></RequireAuth>} />
       <Route path="/audit-log" element={<RequireAuth allowedRoles={['superadmin']}><Layout><AuditLog /></Layout></RequireAuth>} />
       <Route path="*" element={<Navigate to="/login" replace />} />

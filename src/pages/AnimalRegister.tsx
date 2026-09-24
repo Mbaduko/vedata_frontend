@@ -245,7 +245,7 @@ export default function AnimalRegister() {
                 <button
                   onClick={createOwner}
                   disabled={!ownerForm.name || !ownerForm.nid || !ownerForm.phone}
-                  className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50"
+                  className="px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50"
                 >
                   Continue with this owner
                 </button>
@@ -342,7 +342,7 @@ export default function AnimalRegister() {
             <button
               onClick={addAnimalToList}
               disabled={!currentAnimal.tagNumber || !currentAnimal.speciesId || !currentAnimal.dateOfBirth}
-              className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50"
             >
               <PawPrint size={14} /> Add Animal
             </button>

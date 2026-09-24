@@ -61,7 +61,7 @@ export default function Team() {
         </div>
         <button
           onClick={() => setShowInvite(!showInvite)}
-          className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover"
         >
           <Plus size={16} /> Invite Technician
         </button>
@@ -117,7 +117,7 @@ export default function Team() {
             <button
               onClick={handleInvite}
               disabled={!inviteForm.email || !inviteForm.contractStart || !inviteForm.contractEnd}
-              className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50"
+              className="px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50"
             >
               Send Invitation
             </button>

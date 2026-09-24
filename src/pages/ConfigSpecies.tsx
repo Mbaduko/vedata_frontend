@@ -81,7 +81,7 @@ export default function ConfigSpecies() {
             setEditingSpecies(null);
             setShowSpeciesModal(true);
           }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors font-medium"
         >
           <Plus size={18} />
           Add Species
@@ -90,12 +90,12 @@ export default function ConfigSpecies() {
 
       {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="bg-danger-bg border border-danger-border rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle size={20} className="text-danger-text flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-sm text-danger-text">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-ink-secondary hover:text-danger-text">
             <X size={16} />
           </button>
         </div>
@@ -294,7 +294,7 @@ function SpeciesRow({
             </button>
             <button
               onClick={onDelete}
-              className="p-2 text-ink-secondary hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="p-2 text-ink-secondary hover:text-danger-text hover:bg-danger-bg rounded-lg transition-colors"
               title="Delete species"
               disabled={(species._count?.animals || 0) > 0}
             >
@@ -311,7 +311,7 @@ function SpeciesRow({
             <p className="text-sm font-medium text-ink-secondary">Breeds</p>
             <button
               onClick={onAddBreed}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors"
             >
               <Plus size={14} />
               Add Breed
@@ -342,7 +342,7 @@ function SpeciesRow({
                     </button>
                     <button
                       onClick={() => onDeleteBreed(breed)}
-                      className="p-1.5 text-ink-secondary hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      className="p-1.5 text-ink-secondary hover:text-danger-text hover:bg-danger-bg rounded transition-colors"
                       title="Delete breed"
                     >
                       <Trash2 size={14} />
@@ -404,7 +404,7 @@ function SpeciesModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            <div className="bg-danger-bg border border-danger-border rounded-lg p-3 text-sm text-danger-text">
               {error}
             </div>
           )}
@@ -429,7 +429,7 @@ function SpeciesModal({
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? (
                 <>
@@ -506,7 +506,7 @@ function BreedModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            <div className="bg-danger-bg border border-danger-border rounded-lg p-3 text-sm text-danger-text">
               {error}
             </div>
           )}
@@ -531,7 +531,7 @@ function BreedModal({
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? (
                 <>
@@ -585,8 +585,8 @@ function DeleteConfirmModal({
       <div className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
-              <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
+            <div className="w-10 h-10 rounded-full bg-danger-bg flex items-center justify-center flex-shrink-0">
+              <AlertCircle size={20} className="text-danger-text" />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-ink mb-1">Delete {type === 'species' ? 'Species' : 'Breed'}?</h3>
@@ -601,7 +601,7 @@ function DeleteConfirmModal({
             <button
               onClick={handleConfirm}
               disabled={loading}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-danger-solid text-on-brand rounded-lg hover:bg-danger-solid-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? (
                 <>

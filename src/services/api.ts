@@ -321,6 +321,82 @@ export const userApi = {
     request<UserRecord>('/users', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// Invitation API
+export interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  status: 'pending' | 'accepted' | 'expired' | 'revoked';
+  invitedByName?: string;
+  zoneName?: string | null;
+  zoneId?: string | null;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  createdAt: string;
+}
+
+export interface InvitationPreview {
+  email: string;
+  role: string;
+  invitedByName: string;
+  zoneName: string | null;
+  expiresAt: string;
+}
+
+export interface CreateInvitationRequest {
+  email: string;
+  role?: 'superadmin' | 'vet' | 'technician';
+  zoneId?: string;
+  inviteExpiryHours?: number;
+}
+
+export interface AcceptInvitationRequest {
+  token: string;
+  name: string;
+  password: string;
+}
+
+export const invitationApi = {
+  // Superadmin endpoints
+  inviteUser: (data: CreateInvitationRequest) =>
+    request<{ id: string; email: string; role: string; expiresAt: string; inviteUrl?: string }>(
+      '/users/invite',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+  
+  getInvitations: () =>
+    request<Invitation[]>('/users/invitations'),
+  
+  resendInvitation: (id: string, inviteExpiryHours?: number) =>
+    request<{ id: string; email: string; expiresAt: string }>(
+      `/users/invitations/${id}/resend`,
+      { method: 'POST', body: JSON.stringify({ inviteExpiryHours }) }
+    ),
+  
+  revokeInvitation: (id: string) =>
+    request<void>(`/users/invitations/${id}`, { method: 'DELETE' }),
+
+  // Vet endpoints
+  inviteTechnician: (data: { email: string; zoneId?: string; inviteExpiryHours?: number }) =>
+    request<{ id: string; email: string; role: string; expiresAt: string; inviteUrl?: string }>(
+      '/team/invite',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+  
+  getTeamInvitations: () =>
+    request<Invitation[]>('/team/invitations'),
+
+  // Public endpoints (no auth required)
+  getInvitationPreview: (token: string) =>
+    request<InvitationPreview>(`/auth/invite/preview?token=${encodeURIComponent(token)}`),
+  
+  acceptInvitation: (data: AcceptInvitationRequest) =>
+    request<UserResponse>('/auth/invite/accept', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
 // Export the base request function for other API modules
 export { request, ApiError };
 export default {
@@ -328,4 +404,5 @@ export default {
   dashboard: dashboardApi,
   zones: zoneApi,
   species: speciesApi,
+  invitations: invitationApi,
 };

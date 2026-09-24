@@ -133,7 +133,7 @@ export default function VaccinationsDue() {
             onClick={() => setFilterStatus(option.value)}
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
               filterStatus === option.value
-                ? 'bg-brand text-white'
+                ? 'bg-brand text-on-brand'
                 : 'bg-card border border-border text-ink-secondary hover:bg-bg'
             }`}
           >

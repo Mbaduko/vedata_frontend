@@ -22,10 +22,10 @@ export default function AnimalOwnerSearch({ animals, owners, onSelectAnimal, onS
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <button onClick={() => { setSearchType('tag'); setQuery(''); }} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${searchType === 'tag' ? 'bg-brand text-white' : 'bg-card border border-border text-ink-secondary hover:bg-bg'}`}>
+        <button onClick={() => { setSearchType('tag'); setQuery(''); }} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${searchType === 'tag' ? 'bg-brand text-on-brand' : 'bg-card border border-border text-ink-secondary hover:bg-bg'}`}>
           <Tag size={14} /> Tag Number
         </button>
-        <button onClick={() => { setSearchType('nid'); setQuery(''); }} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${searchType === 'nid' ? 'bg-brand text-white' : 'bg-card border border-border text-ink-secondary hover:bg-bg'}`}>
+        <button onClick={() => { setSearchType('nid'); setQuery(''); }} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${searchType === 'nid' ? 'bg-brand text-on-brand' : 'bg-card border border-border text-ink-secondary hover:bg-bg'}`}>
           <User size={14} /> Owner NID / Name
         </button>
       </div>

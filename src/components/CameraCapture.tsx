@@ -31,8 +31,9 @@ export default function CameraCapture({ onCapture, required = true }: CameraCapt
       const canvas = document.createElement('canvas');
       canvas.width = 640; canvas.height = 480;
       const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#E4EDE9'; ctx.fillRect(0, 0, 640, 480);
-      ctx.fillStyle = '#2F5D50'; ctx.font = '24px IBM Plex Sans'; ctx.textAlign = 'center';
+      const tokens = getComputedStyle(document.documentElement);
+      ctx.fillStyle = tokens.getPropertyValue('--brand-bg').trim(); ctx.fillRect(0, 0, 640, 480);
+      ctx.fillStyle = tokens.getPropertyValue('--brand').trim(); ctx.font = '24px IBM Plex Sans'; ctx.textAlign = 'center';
       ctx.fillText('Vaccine Evidence', 320, 220);
       ctx.font = '16px IBM Plex Sans'; ctx.fillText(new Date().toLocaleDateString(), 320, 260);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -84,7 +85,7 @@ export default function CameraCapture({ onCapture, required = true }: CameraCapt
           <canvas ref={canvasRef} className="hidden" />
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={takePhoto} className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90"><Camera size={16} /> Capture Photo</button>
+          <button onClick={takePhoto} className="flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg text-sm font-medium hover:bg-brand-hover"><Camera size={16} /> Capture Photo</button>
           <button onClick={stopCamera} className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm text-ink-secondary hover:bg-card"><X size={16} /> Cancel</button>
         </div>
       </div>

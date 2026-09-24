@@ -42,7 +42,7 @@ export default function ConfigDiseases() {
         </div>
         <button
           onClick={() => setShowNewDisease(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover"
         >
           <Plus size={16} /> New Disease
         </button>
@@ -85,7 +85,7 @@ export default function ConfigDiseases() {
             </div>
           </div>
           <div className="flex gap-2 mt-4">
-            <button onClick={handleCreateDisease} disabled={!newDisease.name.trim()} className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50">Create</button>
+            <button onClick={handleCreateDisease} disabled={!newDisease.name.trim()} className="px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50">Create</button>
             <button onClick={() => setShowNewDisease(false)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-bg rounded-lg border border-border">Cancel</button>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function ConfigDiseases() {
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={handleCreateVaccine} disabled={!newVaccine.name.trim()} className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50">Create</button>
+              <button onClick={handleCreateVaccine} disabled={!newVaccine.name.trim()} className="px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50">Create</button>
               <button onClick={() => setShowNewVaccine(null)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-bg rounded-lg border border-border">Cancel</button>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function ConfigDiseases() {
               )}
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={handleCreateSchedule} className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90">Add Schedule</button>
+              <button onClick={handleCreateSchedule} className="px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover">Add Schedule</button>
               <button onClick={() => setShowNewSchedule(null)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-bg rounded-lg border border-border">Cancel</button>
             </div>
           </div>

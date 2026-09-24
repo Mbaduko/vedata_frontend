@@ -58,7 +58,7 @@ export default function Zones() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors font-medium"
         >
           <Plus size={18} />
           Create Zone
@@ -67,12 +67,12 @@ export default function Zones() {
 
       {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="bg-danger-bg border border-danger-border rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle size={20} className="text-danger-text flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-sm text-danger-text">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-ink-secondary hover:text-danger-text">
             <X size={16} />
           </button>
         </div>
@@ -107,7 +107,7 @@ export default function Zones() {
           {!searchQuery && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors font-medium"
             >
               <Plus size={18} />
               Create Zone
@@ -236,14 +236,14 @@ function CreateZoneModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            <div className="bg-danger-bg border border-danger-border rounded-lg p-3 text-sm text-danger-text">
               {error}
             </div>
           )}
 
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-ink mb-1.5">
-              Zone Name <span className="text-red-500">*</span>
+              Zone Name <span className="text-danger-text">*</span>
             </label>
             <input
               id="name"
@@ -318,7 +318,7 @@ function CreateZoneModal({ onClose, onSuccess }: { onClose: () => void; onSucces
             <button
               type="submit"
               disabled={loading || !formData.name.trim()}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? (
                 <>

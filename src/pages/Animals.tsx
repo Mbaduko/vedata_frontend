@@ -53,7 +53,7 @@ export default function Animals() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-display font-semibold text-ink">Animals</h1><p className="text-sm text-ink-secondary mt-1">{filtered.length} of {scopedAnimals.length} animals</p></div>
-        <button onClick={() => navigate('/animals/register')} className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 transition-colors"><Plus size={16} /> Register Animal</button>
+        <button onClick={() => navigate('/animals/register')} className="flex items-center gap-2 px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover transition-colors"><Plus size={16} /> Register Animal</button>
       </div>
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">

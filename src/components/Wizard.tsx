@@ -21,10 +21,10 @@ export default function Wizard({ steps, currentStep, onStepChange, onNext, onBac
               onClick={() => index < currentStep && onStepChange(index)}
               disabled={index > currentStep}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                index === currentStep ? 'bg-brand text-white' : index < currentStep ? 'bg-brand-bg text-brand-text cursor-pointer hover:bg-brand/10' : 'bg-bg text-ink-secondary cursor-not-allowed'
+                index === currentStep ? 'bg-brand text-on-brand' : index < currentStep ? 'bg-brand-bg text-brand-text cursor-pointer hover:bg-brand/10' : 'bg-bg text-ink-secondary cursor-not-allowed'
               }`}
             >
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index < currentStep ? 'bg-brand text-white' : index === currentStep ? 'bg-white/20' : 'bg-border text-ink-secondary'}`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index < currentStep ? 'bg-brand text-on-brand' : index === currentStep ? 'bg-on-brand/20' : 'bg-border text-ink-secondary'}`}>
                 {index < currentStep ? <Check size={14} /> : index + 1}
               </span>
               <span className="hidden sm:inline">{step.label}</span>
@@ -41,11 +41,11 @@ export default function Wizard({ steps, currentStep, onStepChange, onNext, onBac
           <ChevronLeft size={16} /> Back
         </button>
         {currentStep < steps.length - 1 ? (
-          <button onClick={onNext} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand text-white hover:bg-brand/90 transition-colors">
+          <button onClick={onNext} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand text-on-brand hover:bg-brand-hover transition-colors">
             Next <ChevronRight size={16} />
           </button>
         ) : (
-          <button onClick={onSubmit} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand text-white hover:bg-brand/90 transition-colors">
+          <button onClick={onSubmit} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand text-on-brand hover:bg-brand-hover transition-colors">
             <Check size={16} /> Submit
           </button>
         )}

@@ -158,7 +158,7 @@ export default function VaccinationRecord() {
           </button>
           <button
             onClick={() => navigate('/vaccinations/due')}
-            className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90"
+            className="px-4 py-2 bg-brand text-on-brand text-sm font-medium rounded-lg hover:bg-brand-hover"
           >
             View Due List
           </button>

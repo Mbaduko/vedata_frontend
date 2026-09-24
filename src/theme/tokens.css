@@ -1,58 +1,169 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
+/* ==========================================================================
+   VEDATA DESIGN TOKENS — THE single source of truth for every color.
+   No color literal belongs anywhere else in src/. Map intent → token here.
+
+   Palette (primitives):   brand (green) · gold (amber) · sky (blue) · clay (red) · violet
+   Semantic (aliases):     success = brand · warning = gold · info = sky · danger = clay
+   Neutral chip:           muted (locked/read-only states) — derived from ink, adapts per theme
+   On-brand content:       text-on-brand / bg-on-brand /NN for brand surfaces
+   ========================================================================== */
+
+/* `dark:` utilities follow the app's [data-theme] toggle, not the OS. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
+  /* Type */
   --font-body: 'IBM Plex Sans', sans-serif;
   --font-display: 'Fraunces', serif;
+
+  /* Surfaces & ink */
   --color-bg: var(--bg);
   --color-card: var(--card);
   --color-ink: var(--ink);
   --color-ink-secondary: var(--ink-secondary);
   --color-border: var(--border);
+
+  /* Brand (locked) */
   --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
   --color-brand-bg: var(--brand-bg);
   --color-brand-text: var(--brand-text);
+  --color-brand-border: var(--brand-border);
+
+  /* Content rendered on brand surfaces (logo, hero, primary buttons) */
+  --color-on-brand: var(--on-brand);
+
+  /* Status palette chips (decorative) */
   --color-gold-bg: var(--gold-bg);
   --color-gold-text: var(--gold-text);
+  --color-gold-border: var(--gold-border);
   --color-sky-bg: var(--sky-bg);
   --color-sky-text: var(--sky-text);
+  --color-sky-border: var(--sky-border);
   --color-clay-bg: var(--clay-bg);
   --color-clay-text: var(--clay-text);
+  --color-clay-border: var(--clay-border);
+
+  /* Semantic status aliases — intent-named aliases of the palette above */
+  --color-success-bg: var(--brand-bg);
+  --color-success-text: var(--brand-text);
+  --color-success-border: var(--brand-border);
+  --color-warning-bg: var(--gold-bg);
+  --color-warning-text: var(--gold-text);
+  --color-warning-border: var(--gold-border);
+  --color-info-bg: var(--sky-bg);
+  --color-info-text: var(--sky-text);
+  --color-info-border: var(--sky-border);
+  --color-danger-bg: var(--clay-bg);
+  --color-danger-text: var(--clay-text);
+  --color-danger-border: var(--clay-border);
+
+  /* Violet — fourth accent (animal metrics) */
+  --color-violet-bg: var(--violet-bg);
+  --color-violet-text: var(--violet-text);
+  --color-violet-border: var(--violet-border);
+
+  /* Muted — neutral chips (locked, read-only, n/a) */
+  --color-muted-bg: var(--muted-bg);
+  --color-muted-text: var(--muted-text);
+  --color-muted-border: var(--muted-border);
+
+  /* Solid destructive surface — pair with text-on-brand */
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-solid-hover: var(--danger-solid-hover);
+
+  /* Elevation — brand-tinted shadows replace Tailwind's neutral defaults */
+  --shadow-xs: 0 1px 2px 0 rgb(22 36 29 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(22 36 29 / 0.08), 0 1px 2px -1px rgb(22 36 29 / 0.08);
+  --shadow-md: 0 4px 12px -2px rgb(22 36 29 / 0.12);
+  --shadow-lg: 0 12px 28px -8px rgb(22 36 29 / 0.18);
+  --shadow-xl: 0 24px 48px -12px rgb(22 36 29 / 0.28);
 }
 
+/* ---------------------------------- LIGHT --------------------------------- */
 :root {
+  /* Brand (locked) */
+  --brand: #2F5D50;
+  --brand-hover: #274D43;
+  --brand-bg: #E4EDE9;
+  --brand-text: #2F5D50;
+  --brand-border: #C2D7CE;
+  --on-brand: #FFFFFF;
+
+  /* Surfaces & ink */
   --bg: #EEF0EA;
   --card: #F7F8F3;
   --ink: #16241D;
   --ink-secondary: #5B6156;
   --border: #D6D8CE;
-  --brand: #2F5D50;
-  --brand-bg: #E4EDE9;
-  --brand-text: #2F5D50;
+
+  /* Status palette */
   --gold-bg: #F5E8D2;
   --gold-text: #8A5F1F;
+  --gold-border: #E8D3AC;
   --sky-bg: #DEE9EE;
   --sky-text: #2C5470;
+  --sky-border: #C3D8E2;
   --clay-bg: #F3E2DD;
   --clay-text: #8B4332;
+  --clay-border: #E5C7BE;
+  --violet-bg: #ECE6F4;
+  --violet-text: #5B3E8E;
+  --violet-border: #D6C9EB;
+
+  /* Muted chip — derived from ink so it tracks both themes automatically */
+  --muted-bg: color-mix(in srgb, var(--ink) 6%, var(--card));
+  --muted-text: var(--ink-secondary);
+  --muted-border: var(--border);
+
+  /* Solid destructive button (hover derived, adapts per theme) */
+  --danger-solid: var(--clay-text);
+  --danger-solid-hover: color-mix(in srgb, var(--clay-text) 82%, black);
 }
 
+/* ---------------------------------- DARK ---------------------------------- */
 [data-theme="dark"] {
+  /* Brand flips to a light green; on-brand content flips dark for contrast */
+  --brand: #6FBFA3;
+  --brand-hover: #84CBB4;
+  --brand-bg: #1F332B;
+  --brand-text: #8FCDB3;
+  --brand-border: #2E4A3F;
+  --on-brand: #10211A;
+
+  /* Surfaces & ink */
   --bg: #121A15;
   --card: #1B241E;
   --ink: #E7EAE1;
   --ink-secondary: #9CA394;
   --border: #2C362F;
-  --brand: #6FBFA3;
-  --brand-bg: #1F332B;
-  --brand-text: #8FCDB3;
+
+  /* Status palette */
   --gold-bg: #3A2C13;
   --gold-text: #E3B565;
+  --gold-border: #57461F;
   --sky-bg: #1B2E38;
   --sky-text: #8FC3DC;
+  --sky-border: #2A4859;
   --clay-bg: #331F19;
   --clay-text: #D99A85;
+  --clay-border: #4E3129;
+  --violet-bg: #2A2135;
+  --violet-text: #B79AE0;
+  --violet-border: #3E3250;
+
+  /* Shadows recede further on dark surfaces */
+  --shadow-xs: 0 1px 2px 0 rgb(4 10 7 / 0.40);
+  --shadow-sm: 0 1px 3px 0 rgb(4 10 7 / 0.45), 0 1px 2px -1px rgb(4 10 7 / 0.45);
+  --shadow-md: 0 4px 12px -2px rgb(4 10 7 / 0.55);
+  --shadow-lg: 0 12px 28px -8px rgb(4 10 7 / 0.65);
+  --shadow-xl: 0 24px 48px -12px rgb(4 10 7 / 0.75);
 }
+
+/* ------------------------------ BASE POLISH ------------------------------- */
 
 * {
   font-family: 'IBM Plex Sans', sans-serif;
@@ -62,6 +173,8 @@ body {
   margin: 0;
   background-color: var(--bg);
   color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -78,4 +191,43 @@ h1, h2, h3, h4, h5, h6 {
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Brand-tinted text selection */
+::selection {
+  background: color-mix(in srgb, var(--brand) 26%, transparent);
+}
+
+/* Accessible focus ring everywhere without per-element markup */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Slim, token-colored scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--border) 70%, var(--ink-secondary));
+  background-clip: content-box;
 }

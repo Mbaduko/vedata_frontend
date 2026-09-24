@@ -121,7 +121,7 @@ export default function AnimalDetail() {
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
               <button onClick={() => setShowEdit(false)} className="px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-bg rounded-lg border border-border">Cancel</button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm font-medium bg-brand text-white rounded-lg hover:bg-brand/90">Save Changes</button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm font-medium bg-brand text-on-brand rounded-lg hover:bg-brand-hover">Save Changes</button>
             </div>
           </div>
         </div>
