@@ -115,8 +115,119 @@ export const authApi = {
     }),
 };
 
+// Dashboard API
+export interface DashboardData {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    permissions: string[];
+  };
+  permissions: {
+    canViewSystemDashboard: boolean;
+    canViewZoneDashboard: boolean;
+    canViewPersonalDashboard: boolean;
+    canManageZones: boolean;
+    canManageUsers: boolean;
+    canViewAuditLog: boolean;
+    canManageTeam: boolean;
+    canConfigureSystem: boolean;
+  };
+  metrics: {
+    system?: {
+      totalZones: number;
+      totalUsers: number;
+      totalAnimals: number;
+      totalVaccinations: number;
+    };
+    zone?: {
+      totalAnimals: number;
+      totalVaccinations: number;
+      totalOwners: number;
+      zonesManaged: number;
+    };
+    personal?: {
+      animalsRegistered: number;
+      vaccinationsRecorded: number;
+    };
+  };
+  zones?: Array<{
+    id: string;
+    name: string;
+    label: string;
+    leadVet: string | null;
+    animalCount: number;
+    ownerCount: number;
+  }>;
+  dueVaccinations?: Array<{
+    id: string;
+    animalTag: string;
+    animalSpecies: string;
+    ownerName: string;
+    ownerPhone: string;
+    zone: string;
+    disease: string;
+    vaccine: string;
+    doseNumber: number;
+    nextDueDate: string;
+    isDue: boolean;
+  }>;
+  teamMembers?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    zone: string;
+    contractStart: string | null;
+    contractEnd: string | null;
+  }>;
+  recentActivity?: Array<{
+    id: string;
+    action: string;
+    entity: string;
+    entityId: string;
+    user: string;
+    userRole: string;
+    zone: string | null;
+    timestamp: string;
+  }>;
+  recentEntries?: Array<{
+    id: string;
+    tagNumber: string;
+    species: string;
+    owner: string;
+    zone: string;
+    healthStatus: string;
+    registeredAt: string;
+    editableUntil: string | null;
+  }>;
+  widgets: string[];
+  quickActions: Array<{
+    label: string;
+    path: string;
+    icon: string;
+  }>;
+}
+
+export const dashboardApi = {
+  getDashboard: () => request<DashboardData>('/dashboard'),
+  getPermissions: () =>
+    request<{
+      permissions: string[];
+      dashboard: Record<string, boolean>;
+      role: string;
+      zoneAccess: Array<{
+        zoneId: string;
+        zoneName: string;
+        role: string;
+        isLead: boolean;
+      }>;
+    }>('/dashboard/permissions'),
+};
+
 // Export the base request function for other API modules
 export { request, ApiError };
 export default {
   auth: authApi,
+  dashboard: dashboardApi,
 };
