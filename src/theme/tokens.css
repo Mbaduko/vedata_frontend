@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-display: 'Fraunces', serif;
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-text: var(--brand-text);
+  --color-gold-bg: var(--gold-bg);
+  --color-gold-text: var(--gold-text);
+  --color-sky-bg: var(--sky-bg);
+  --color-sky-text: var(--sky-text);
+  --color-clay-bg: var(--clay-bg);
+  --color-clay-text: var(--clay-text);
+}
+
+:root {
+  --bg: #EEF0EA;
+  --card: #F7F8F3;
+  --ink: #16241D;
+  --ink-secondary: #5B6156;
+  --border: #D6D8CE;
+  --brand: #2F5D50;
+  --brand-bg: #E4EDE9;
+  --brand-text: #2F5D50;
+  --gold-bg: #F5E8D2;
+  --gold-text: #8A5F1F;
+  --sky-bg: #DEE9EE;
+  --sky-text: #2C5470;
+  --clay-bg: #F3E2DD;
+  --clay-text: #8B4332;
+}
+
+[data-theme="dark"] {
+  --bg: #121A15;
+  --card: #1B241E;
+  --ink: #E7EAE1;
+  --ink-secondary: #9CA394;
+  --border: #2C362F;
+  --brand: #6FBFA3;
+  --brand-bg: #1F332B;
+  --brand-text: #8FCDB3;
+  --gold-bg: #3A2C13;
+  --gold-text: #E3B565;
+  --sky-bg: #1B2E38;
+  --sky-text: #8FC3DC;
+  --clay-bg: #331F19;
+  --clay-text: #D99A85;
+}
+
+* {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--ink);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Fraunces', serif;
+}
+
+.font-display {
+  font-family: 'Fraunces', serif;
+}
+
+.font-body {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
