@@ -233,19 +233,30 @@ export interface Zone {
   label: string;
   parentZoneId: string | null;
   leadVetId: string | null;
+  createdByUserId: string;
   technicianGracePeriodHours: number;
   inviteExpiryHours: number;
   status: string;
   createdAt: string;
   updatedAt: string;
   leadVet?: { id: string; name: string; email: string };
+  createdBy?: { id: string; name: string; email: string };
   parentZone?: { id: string; name: string; label: string };
+  childZones?: Array<{ id: string; name: string; label: string; _count?: { animals: number } }>;
+  userZoneRoles?: Array<{
+    id: string;
+    zoneId: string;
+    role: string;
+    isLead: boolean;
+    status: string;
+    user: { id: string; name: string; email: string; role: string };
+  }>;
   _count?: { animals: number; owners: number; childZones: number };
 }
 
 export const zoneApi = {
   getZones: (params?: { page?: number; limit?: number; search?: string }) =>
-    request<{ data: Zone[]; meta: any }>('/zones?' + new URLSearchParams(params as any).toString()),
+    request<Zone[]>('/zones?' + new URLSearchParams(params as any).toString()),
   getZone: (id: string) => request<Zone>(`/zones/${id}`),
   createZone: (data: Partial<Zone>) => request<Zone>('/zones', { method: 'POST', body: JSON.stringify(data) }),
   updateZone: (id: string, data: Partial<Zone>) =>

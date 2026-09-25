@@ -1,265 +1,785 @@
-import { useState } from 'react';
-import { useData, useDispatch } from '../context/DataContext';
-import { useParams, useNavigate } from 'react-router-dom';
-import ImpactConfirmDialog from '../components/ImpactConfirmDialog';
-import MetricCard from '../components/MetricCard';
-import { ArrowLeft, MapPin, Dog, Users, Settings, Move, Archive } from 'lucide-react';
-
-function getDescendantZoneIds(zones, zoneId) {
-  const ids = [zoneId];
-  const children = zones.filter(z => z.parentId === zoneId);
-  children.forEach(child => {
-    ids.push(...getDescendantZoneIds(zones, child.id));
-  });
-  return ids;
-}
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { zoneApi, userApi, type Zone, type UserRecord, ApiError } from '../services/api';
+import {
+  ArrowLeft,
+  MapPin,
+  Edit,
+  Archive,
+  Loader,
+  AlertCircle,
+  Users,
+  Dog,
+  UserPlus,
+  Calendar,
+  ShieldCheck,
+  Crown,
+  Building2,
+  X,
+  Check,
+  Network,
+  Clock,
+  TrendingUp,
+  Activity,
+  Settings,
+  MoreVertical,
+  Eye,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function ZoneDetail() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { zones, users, animals, currentUser } = useData();
-  const dispatch = useDispatch();
+  const { user } = useAuth();
+  const [zone, setZone] = useState<Zone | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'subzones'>('overview');
 
-  const zone = zones.find(z => z.id === id);
-  if (!zone) {
+  useEffect(() => {
+    if (id) {
+      loadZone();
+    }
+  }, [id]);
+
+  const loadZone = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await zoneApi.getZone(id!);
+      setZone(data);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load zone');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    try {
+      await zoneApi.archiveZone(id!);
+      navigate('/zones');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to archive zone');
+      setShowArchiveModal(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-ink-secondary">Zone not found</p>
-        <button onClick={() => navigate('/zones')} className="text-brand mt-2 text-sm">
-          Back to zones
-        </button>
+      <div className="flex flex-col items-center justify-center min-h-[500px]">
+        <Loader size={48} className="text-brand animate-spin mb-4" />
+        <p className="text-ink-secondary">Loading zone details...</p>
       </div>
     );
   }
 
-  const [showMove, setShowMove] = useState(false);
-  const [showArchive, setShowArchive] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [moveTarget, setMoveTarget] = useState<string>('');
-  const [settings, setSettings] = useState<Record<string, unknown>>({
-    name: zone.name,
-    label: zone.label,
-    technicianGracePeriodHours: zone.technicianGracePeriodHours,
-    inviteExpiryHours: zone.inviteExpiryHours,
-  });
+  if (error || !zone) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => navigate('/zones')}
+          className="inline-flex items-center gap-2 text-ink-secondary hover:text-ink transition-colors font-medium"
+        >
+          <ArrowLeft size={18} />
+          Back to Zones
+        </button>
+        <div className="bg-danger-bg border border-danger-border rounded-xl p-6 flex items-start gap-3">
+          <AlertCircle size={24} className="text-danger-text flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-danger-text mb-1">Error Loading Zone</h3>
+            <p className="text-sm text-danger-text">{error || 'Zone not found'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const descendantIds = getDescendantZoneIds(zones, zone.id);
-  const zoneAnimals = animals.filter(a => descendantIds.includes(a.zoneId));
-  const zoneUsers = users.filter(u => u.zoneRoles.some(zr => descendantIds.includes(zr.zoneId)));
-  const childZones = zones.filter(z => z.parentId === zone.id && !z.archived);
-
-  const leadVet = users.find(u =>
-    u.zoneRoles.some(zr => zr.zoneId === zone.id && zr.isLead)
-  );
-
-  // Check for circular reference
-  const getAncestorIds = (zoneId, zones) => {
-    const parent = zones.find(z => z.id === zoneId);
-    if (!parent?.parentId) return [];
-    return [parent.parentId, ...getAncestorIds(parent.parentId, zones)];
-  };
-  const ancestorIds = getAncestorIds(zone.id, zones);
-  const validTargets = zones.filter(z =>
-    z.id !== zone.id && !z.archived && !ancestorIds.includes(z.id) && !descendantIds.includes(z.id)
-  );
-
-  const handleMove = () => {
-    if (!moveTarget) return;
-    dispatch({ type: 'MOVE_ZONE', payload: { zoneId: zone.id, newParentId: moveTarget } });
-    setShowMove(false);
-    setMoveTarget('');
-  };
-
-  const handleArchive = () => {
-    dispatch({ type: 'ARCHIVE_ZONE', payload: { zoneId: zone.id } });
-    setShowArchive(false);
-    navigate('/zones');
-  };
-
-  const handleSaveSettings = () => {
-    dispatch({
-      type: 'UPDATE_ZONE',
-      payload: { zoneId: zone.id, updates: settings },
-    });
-    setShowSettings(false);
-  };
+  const canEdit = user?.role === 'superadmin' || user?.role === 'vet';
+  const isOwner = zone.createdByUserId === user?.id;
+  const isLeadVet = zone.leadVetId === user?.id;
+  const hasAuthority = user?.role === 'superadmin' || isOwner || isLeadVet;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 text-sm">
         <button
           onClick={() => navigate('/zones')}
-          className="p-2 hover:bg-card rounded-lg border border-border"
+          className="text-ink-secondary hover:text-brand transition-colors"
         >
-          <ArrowLeft size={16} className="text-ink-secondary" />
+          Zones
         </button>
-        <div>
-          <h1 className="text-2xl font-display font-semibold text-ink">{zone.name}</h1>
-          <p className="text-sm text-ink-secondary">{zone.label} · {zone.parentId ? `Under ${zones.find(z => z.id === zone.parentId)?.name}` : 'Top level'}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Animals" value={zoneAnimals.length} icon={Dog} />
-        <MetricCard label="Users" value={zoneUsers.length} icon={Users} />
-        <MetricCard label="Sub-zones" value={childZones.length} icon={MapPin} />
-        <MetricCard
-          label="Lead Vet"
-          value={leadVet ? leadVet.name.split(' ').slice(0, 2).join(' ') : 'None'}
-          icon={Users}
-        />
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-3">
-        {currentUser?.role === 'superadmin' && (
+        <span className="text-ink-secondary">/</span>
+        {zone.parentZone && (
           <>
-            <button
-              onClick={() => setShowMove(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium text-ink hover:bg-card transition-colors"
+            <Link
+              to={`/zones/${zone.parentZone.id}`}
+              className="text-ink-secondary hover:text-brand transition-colors"
             >
-              <Move size={16} /> Move Zone
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium text-ink hover:bg-card transition-colors"
-            >
-              <Settings size={16} /> Settings
-            </button>
-            <button
-              onClick={() => setShowArchive(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-clay/30 rounded-lg text-sm font-medium text-clay-text hover:bg-clay-bg/30 transition-colors"
-            >
-              <Archive size={16} /> Archive
-            </button>
+              {zone.parentZone.name}
+            </Link>
+            <span className="text-ink-secondary">/</span>
           </>
         )}
+        <span className="text-ink font-medium">{zone.name}</span>
       </div>
 
-      {/* Assigned Users */}
-      <div className="bg-card border border-border rounded-xl p-6">
-        <h2 className="text-lg font-display font-semibold text-ink mb-4">Assigned Users</h2>
-        <div className="space-y-2">
-          {zoneUsers.length === 0 ? (
-            <p className="text-sm text-ink-secondary">No users assigned to this zone</p>
-          ) : (
-            zoneUsers.map(user => {
-              const zoneRole = user.zoneRoles.find(zr => zr.zoneId === zone.id);
-              return (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-bg rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-ink">{user.name}</p>
-                    <p className="text-xs text-ink-secondary">{user.email}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-medium bg-brand-bg text-brand-text px-2 py-0.5 rounded-full">
-                      {zoneRole?.isLead ? 'Lead Vet' : user.role}
+      {/* Header Section */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-gradient-to-r from-brand-bg via-brand-bg/50 to-transparent px-6 py-8">
+          <div className="flex flex-col md:flex-row md:items-start gap-6">
+            {/* Zone Icon and Title */}
+            <div className="flex items-start gap-4 flex-1">
+              <div className="w-16 h-16 rounded-xl bg-brand/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 shadow-lg">
+                <MapPin size={32} className="text-brand" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-display font-bold text-ink">{zone.name}</h1>
+                  <span className="inline-flex items-center px-3 py-1 bg-brand text-on-brand text-sm font-medium rounded-full shadow-sm">
+                    {zone.label}
+                  </span>
+                </div>
+                {zone.parentZone && (
+                  <Link
+                    to={`/zones/${zone.parentZone.id}`}
+                    className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-brand transition-colors group"
+                  >
+                    <Building2 size={16} />
+                    <span>
+                      Part of <span className="font-medium group-hover:underline">{zone.parentZone.name}</span>
                     </span>
-                    {zoneRole?.contractEnd && (
-                      <p className="text-xs text-ink-secondary mt-1">
-                        Until {new Date(zoneRole.contractEnd).toLocaleDateString()}
-                      </p>
-                    )}
+                  </Link>
+                )}
+                <div className="flex items-center gap-4 mt-3 text-sm text-ink-secondary">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={14} />
+                    <span>Created {new Date(zone.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Activity size={14} />
+                    <span className="text-green-600 font-medium">Active</span>
                   </div>
                 </div>
-              );
-            })
-          )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {hasAuthority && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-border text-ink rounded-lg hover:bg-bg transition-all font-medium shadow-sm"
+                >
+                  <Edit size={18} />
+                  Edit Zone
+                </button>
+              )}
+              {hasAuthority && (
+                <button
+                  onClick={() => setShowArchiveModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-danger-border text-danger-text rounded-lg hover:bg-danger-bg transition-all font-medium shadow-sm"
+                >
+                  <Archive size={18} />
+                  Archive
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats Bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 border-t border-border">
+          <div className="px-6 py-4 border-r border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Dog size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-ink">{zone._count?.animals || 0}</p>
+                <p className="text-xs text-ink-secondary">Animals</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-r border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <Users size={20} className="text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-ink">{zone._count?.owners || 0}</p>
+                <p className="text-xs text-ink-secondary">Owners</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-r border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Network size={20} className="text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-ink">{zone._count?.childZones || 0}</p>
+                <p className="text-xs text-ink-secondary">Sub-zones</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Clock size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-ink">{zone.technicianGracePeriodHours}h</p>
+                <p className="text-xs text-ink-secondary">Grace Period</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Move Dialog */}
-      {showMove && (
-        <ImpactConfirmDialog
-          title="Move Zone"
-          message={`Move "${zone.name}" and all its data to a new parent zone.`}
-          impacts={[
-            { label: 'Sub-zones', value: childZones.length },
-            { label: 'Animals', value: zoneAnimals.length },
-            { label: 'Users', value: zoneUsers.length },
-          ]}
-          onConfirm={handleMove}
-          onCancel={() => { setShowMove(false); setMoveTarget(''); }}
-          confirmLabel="Move Zone"
-        />
-      )}
+      {/* Tab Navigation */}
+      <div className="border-b border-border">
+        <nav className="flex gap-6">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-3 px-1 border-b-2 transition-colors font-medium ${
+              activeTab === 'overview'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-ink-secondary hover:text-ink'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('team')}
+            className={`pb-3 px-1 border-b-2 transition-colors font-medium ${
+              activeTab === 'team'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-ink-secondary hover:text-ink'
+            }`}
+          >
+            Team Members
+            {zone.userZoneRoles && zone.userZoneRoles.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-brand-bg text-brand text-xs rounded-full">
+                {zone.userZoneRoles.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('subzones')}
+            className={`pb-3 px-1 border-b-2 transition-colors font-medium ${
+              activeTab === 'subzones'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-ink-secondary hover:text-ink'
+            }`}
+          >
+            Sub-zones
+            {zone.childZones && zone.childZones.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-brand-bg text-brand text-xs rounded-full">
+                {zone.childZones.length}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
 
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30">
-          <div className="bg-card border border-border rounded-xl max-w-lg w-full mx-4 p-6">
-            <h3 className="text-lg font-display font-semibold text-ink mb-4">Zone Settings</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-ink-secondary mb-1">Name</label>
-                <input
-                  type="text"
-                  value={settings.name}
-                  onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-ink-secondary mb-1">Label</label>
-                <input
-                  type="text"
-                  value={settings.label}
-                  onChange={(e) => setSettings({ ...settings, label: e.target.value })}
-                  className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-ink-secondary mb-1">Technician Grace Period (hours)</label>
-                <input
-                  type="number"
-                  value={settings.technicianGracePeriodHours}
-                  onChange={(e) => setSettings({ ...settings, technicianGracePeriodHours: parseInt(e.target.value) || 24 })}
-                  className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-ink-secondary mb-1">Invite Expiry (hours)</label>
-                <input
-                  type="number"
-                  value={settings.inviteExpiryHours}
-                  onChange={(e) => setSettings({ ...settings, inviteExpiryHours: parseInt(e.target.value) || 168 })}
-                  className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
-                />
-              </div>
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Management Card */}
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-ink mb-5 flex items-center gap-2">
+              <Settings size={20} className="text-brand" />
+              Management
+            </h2>
+            <div className="space-y-5">
+              {zone.createdBy && (
+                <div className="flex items-start gap-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <Crown size={20} className="text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">Zone Owner</p>
+                    <p className="text-base font-semibold text-ink">{zone.createdBy.name}</p>
+                    <p className="text-sm text-ink-secondary mt-0.5">{zone.createdBy.email}</p>
+                  </div>
+                </div>
+              )}
+
+              {zone.leadVet && (
+                <div className="flex items-start gap-4 p-4 bg-brand-bg border border-brand/20 rounded-lg">
+                  <div className="w-10 h-10 rounded-lg bg-brand/20 flex items-center justify-center flex-shrink-0">
+                    <ShieldCheck size={20} className="text-brand" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-brand uppercase tracking-wide mb-1">Lead Veterinarian</p>
+                    <p className="text-base font-semibold text-ink">{zone.leadVet.name}</p>
+                    <p className="text-sm text-ink-secondary mt-0.5">{zone.leadVet.email}</p>
+                  </div>
+                </div>
+              )}
+
+              {!zone.leadVet && (
+                <div className="flex items-start gap-4 p-4 bg-bg border border-border rounded-lg">
+                  <div className="w-10 h-10 rounded-lg bg-ink-secondary/10 flex items-center justify-center flex-shrink-0">
+                    <ShieldCheck size={20} className="text-ink-secondary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">Lead Veterinarian</p>
+                    <p className="text-sm text-ink-secondary">No lead vet assigned</p>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowSettings(false)}
-                className="px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-bg rounded-lg border border-border"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveSettings}
-                className="px-4 py-2 text-sm font-medium bg-brand text-on-brand rounded-lg hover:bg-brand-hover"
-              >
-                Save Settings
-              </button>
+          </div>
+
+          {/* Configuration Card */}
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-ink mb-5 flex items-center gap-2">
+              <Settings size={20} className="text-brand" />
+              Configuration
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-bg rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Clock size={18} className="text-ink-secondary" />
+                  <div>
+                    <p className="text-sm font-medium text-ink">Technician Grace Period</p>
+                    <p className="text-xs text-ink-secondary">Time allowed for data entry edits</p>
+                  </div>
+                </div>
+                <span className="text-lg font-bold text-brand">{zone.technicianGracePeriodHours}h</span>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-bg rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Activity size={18} className="text-ink-secondary" />
+                  <div>
+                    <p className="text-sm font-medium text-ink">Status</p>
+                    <p className="text-xs text-ink-secondary">Current operational state</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center px-3 py-1 bg-green-500/10 text-green-600 text-sm font-medium rounded-full">
+                  Active
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-bg rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Calendar size={18} className="text-ink-secondary" />
+                  <div>
+                    <p className="text-sm font-medium text-ink">Created Date</p>
+                    <p className="text-xs text-ink-secondary">Zone establishment date</p>
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-ink">
+                  {new Date(zone.createdAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Archive Confirmation */}
-      {showArchive && (
-        <ImpactConfirmDialog
-          title="Archive Zone"
-          message={`Archive "${zone.name}"? This zone will be hidden from active views but historical data is retained.`}
-          impacts={[
-            { label: 'Sub-zones to archive', value: childZones.length },
-            { label: 'Animals affected', value: zoneAnimals.length },
-            { label: 'Users to suspend', value: zoneUsers.filter(u => u.role === 'technician').length },
-          ]}
-          onConfirm={handleArchive}
-          onCancel={() => setShowArchive(false)}
-          confirmLabel="Archive Zone"
+      {activeTab === 'team' && (
+        <div className="bg-card border border-border rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-ink">Team Members</h2>
+            {hasAuthority && (
+              <Link
+                to={`/team/invite?zoneId=${zone.id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-all text-sm font-medium shadow-sm"
+              >
+                <UserPlus size={16} />
+                Invite Member
+              </Link>
+            )}
+          </div>
+          <div className="p-6">
+            {zone.userZoneRoles && zone.userZoneRoles.length > 0 ? (
+              <div className="space-y-3">
+                {zone.userZoneRoles.map((uzr: any) => (
+                  <div
+                    key={uzr.id}
+                    className="flex items-center justify-between p-4 bg-bg hover:bg-brand-bg/30 border border-border hover:border-brand/30 rounded-lg transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-brand-bg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <span className="text-brand font-semibold text-lg">
+                          {uzr.user.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-base font-semibold text-ink">{uzr.user.name}</p>
+                        <p className="text-sm text-ink-secondary">{uzr.user.email}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1.5 text-sm font-medium rounded-full ${
+                        uzr.role === 'vet'
+                          ? 'bg-brand-bg text-brand border border-brand/20'
+                          : 'bg-bg text-ink-secondary border border-border'
+                      }`}
+                    >
+                      {uzr.role === 'vet' ? 'Veterinarian' : 'Technician'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-ink-secondary/10 flex items-center justify-center mx-auto mb-4">
+                  <Users size={28} className="text-ink-secondary" />
+                </div>
+                <h3 className="text-lg font-semibold text-ink mb-2">No team members yet</h3>
+                <p className="text-ink-secondary mb-4 max-w-md mx-auto">
+                  Invite veterinarians and technicians to work in this zone
+                </p>
+                {hasAuthority && (
+                  <Link
+                    to={`/team/invite?zoneId=${zone.id}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-all font-medium"
+                  >
+                    <UserPlus size={18} />
+                    Invite First Member
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'subzones' && (
+        <div className="bg-card border border-border rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-semibold text-ink">Sub-zones</h2>
+          </div>
+          <div className="p-6">
+            {zone.childZones && zone.childZones.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {zone.childZones.map((child: any) => (
+                  <Link
+                    key={child.id}
+                    to={`/zones/${child.id}`}
+                    className="group flex items-center gap-4 p-5 bg-bg hover:bg-brand-bg/30 border border-border hover:border-brand/50 rounded-xl transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-brand-bg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <MapPin size={22} className="text-brand" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-semibold text-ink group-hover:text-brand transition-colors truncate">
+                        {child.name}
+                      </p>
+                      <p className="text-sm text-ink-secondary">{child.label}</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="text-center">
+                        <p className="font-semibold text-ink">{child._count?.animals || 0}</p>
+                        <p className="text-xs text-ink-secondary">Animals</p>
+                      </div>
+                      <ArrowLeft size={16} className="text-ink-secondary group-hover:text-brand group-hover:rotate-180 transition-all" style={{ transform: 'rotate(180deg)' }} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-ink-secondary/10 flex items-center justify-center mx-auto mb-4">
+                  <Network size={28} className="text-ink-secondary" />
+                </div>
+                <h3 className="text-lg font-semibold text-ink mb-2">No sub-zones yet</h3>
+                <p className="text-ink-secondary max-w-md mx-auto">
+                  This zone doesn't have any sub-zones. Create child zones to build a hierarchical structure.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {showEditModal && (
+        <EditZoneModal
+          zone={zone}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            loadZone();
+          }}
         />
       )}
+
+      {showArchiveModal && (
+        <ConfirmArchiveModal
+          zone={zone}
+          onClose={() => setShowArchiveModal(false)}
+          onConfirm={handleArchive}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditZoneModal({
+  zone,
+  onClose,
+  onSuccess,
+}: {
+  zone: Zone;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: zone.name,
+    label: zone.label,
+    leadVetId: zone.leadVetId || '',
+    technicianGracePeriodHours: zone.technicianGracePeriodHours,
+  });
+  const [vets, setVets] = useState<UserRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingVets, setLoadingVets] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadVets();
+  }, []);
+
+  const loadVets = async () => {
+    try {
+      setLoadingVets(true);
+      const users = await userApi.getUsers({ limit: 100 });
+      setVets(users.filter((u) => u.role === 'vet'));
+    } catch (err) {
+      console.error('Failed to load vets:', err);
+    } finally {
+      setLoadingVets(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+      await zoneApi.updateZone(zone.id, {
+        ...formData,
+        leadVetId: formData.leadVetId || null,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update zone');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-card flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-semibold text-ink">Edit Zone</h2>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className="bg-danger-bg border border-danger-border rounded-lg p-3 text-sm text-danger-text">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-ink mb-1.5">
+              Zone Name <span className="text-danger-text">*</span>
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="label" className="block text-sm font-medium text-ink mb-1.5">
+              Zone Type
+            </label>
+            <select
+              id="label"
+              value={formData.label}
+              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            >
+              <option value="Zone">Zone</option>
+              <option value="Region">Region</option>
+              <option value="Province">Province</option>
+              <option value="District">District</option>
+              <option value="Sector">Sector</option>
+              <option value="Cell">Cell</option>
+              <option value="Village">Village</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="leadVet" className="block text-sm font-medium text-ink mb-1.5">
+              Lead Veterinarian
+            </label>
+            <select
+              id="leadVet"
+              value={formData.leadVetId}
+              onChange={(e) => setFormData({ ...formData, leadVetId: e.target.value })}
+              disabled={loading || loadingVets}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            >
+              <option value="">No lead vet</option>
+              {vets.map((vet) => (
+                <option key={vet.id} value={vet.id}>
+                  {vet.name} ({vet.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="gracePeriod" className="block text-sm font-medium text-ink mb-1.5">
+              Grace Period (hours)
+            </label>
+            <input
+              id="gracePeriod"
+              type="number"
+              min="1"
+              value={formData.technicianGracePeriodHours}
+              onChange={(e) =>
+                setFormData({ ...formData, technicianGracePeriodHours: parseInt(e.target.value) })
+              }
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            />
+            <p className="text-xs text-ink-secondary mt-1">Time techs can edit their entries</p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={loading || !formData.name.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? (
+                <>
+                  <Loader size={18} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check size={18} />
+                  Save Changes
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-4 py-2.5 bg-bg border border-border text-ink rounded-lg hover:bg-card transition-colors disabled:opacity-50 font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmArchiveModal({
+  zone,
+  onClose,
+  onConfirm,
+}: {
+  zone: Zone;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+  };
+
+  const hasData = (zone._count?.animals || 0) > 0 || (zone._count?.owners || 0) > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="w-12 h-12 rounded-xl bg-danger-bg flex items-center justify-center mb-4">
+            <Archive size={24} className="text-danger-text" />
+          </div>
+          <h2 className="text-xl font-semibold text-ink mb-2">Archive Zone?</h2>
+          <p className="text-sm text-ink-secondary mb-4">
+            {hasData
+              ? 'This zone cannot be archived because it has active animals or owners. Please reassign them first.'
+              : `Are you sure you want to archive "${zone.name}"? This action cannot be undone easily.`}
+          </p>
+
+          {!hasData && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleConfirm}
+                disabled={loading}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-danger-text text-white rounded-lg hover:bg-danger-text/90 transition-colors disabled:opacity-50 font-medium"
+              >
+                {loading ? (
+                  <>
+                    <Loader size={18} className="animate-spin" />
+                    Archiving...
+                  </>
+                ) : (
+                  <>
+                    <Archive size={18} />
+                    Archive Zone
+                  </>
+                )}
+              </button>
+              <button
+                onClick={onClose}
+                disabled={loading}
+                className="px-4 py-2.5 bg-bg border border-border text-ink rounded-lg hover:bg-card transition-colors disabled:opacity-50 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {hasData && (
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-2.5 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors font-medium"
+            >
+              Close
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -69,8 +69,8 @@ const navItems: NavItem[] = [
   { path: '/vaccinations/due', label: 'Due Vaccinations', icon: AlertCircle, roles: ['vet', 'technician'] },
   { path: '/team', label: 'Team', icon: Users, roles: ['vet'] },
   { path: '/my-activity', label: 'My Activity', icon: Activity, roles: ['technician'] },
+  { path: '/config/species', label: 'Species Config', icon: Settings, roles: ['superadmin', 'vet'] },
   { path: '/config/diseases', label: 'Disease Config', icon: Settings, roles: ['superadmin'] },
-  { path: '/config/species', label: 'Species Config', icon: Settings, roles: ['superadmin'] },
   { path: '/users', label: 'Users', icon: Users, roles: ['superadmin'] },
   { path: '/roles', label: 'Roles', icon: Shield, roles: ['superadmin'] },
   { path: '/audit-log', label: 'Audit Log', icon: FileText, roles: ['superadmin'] },
@@ -231,7 +231,7 @@ function AppRoutes() {
       <Route path="/team/:id" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><TechnicianDetail /></Layout></RequireAuth>} />
       <Route path="/my-activity" element={<RequireAuth allowedRoles={['technician']}><Layout><MyActivity /></Layout></RequireAuth>} />
       <Route path="/config/diseases" element={<RequireAuth allowedRoles={['superadmin']}><Layout><ConfigDiseases /></Layout></RequireAuth>} />
-      <Route path="/config/species" element={<RequireAuth allowedRoles={['superadmin']}><Layout><ConfigSpecies /></Layout></RequireAuth>} />
+      <Route path="/config/species" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><ConfigSpecies /></Layout></RequireAuth>} />
       <Route path="/users" element={<RequireAuth allowedRoles={['superadmin']}><Layout><UsersPage /></Layout></RequireAuth>} />
       <Route path="/users/invite" element={<RequireAuth allowedRoles={['superadmin']}><Layout><InviteUser /></Layout></RequireAuth>} />
       <Route path="/users/invitations" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><Invitations /></Layout></RequireAuth>} />
