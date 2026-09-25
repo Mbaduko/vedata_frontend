@@ -24,6 +24,7 @@ import {
   Settings,
   MoreVertical,
   Eye,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,6 +37,7 @@ export default function ZoneDetail() {
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showCreateSubZoneModal, setShowCreateSubZoneModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'subzones'>('overview');
 
   useEffect(() => {
@@ -462,8 +464,17 @@ export default function ZoneDetail() {
 
       {activeTab === 'subzones' && (
         <div className="bg-card border border-border rounded-xl shadow-sm">
-          <div className="px-6 py-4 border-b border-border">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
             <h2 className="text-lg font-semibold text-ink">Sub-zones</h2>
+            {hasAuthority && (
+              <button
+                onClick={() => setShowCreateSubZoneModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-all text-sm font-medium shadow-sm"
+              >
+                <Plus size={16} />
+                Create Sub-zone
+              </button>
+            )}
           </div>
           <div className="p-6">
             {zone.childZones && zone.childZones.length > 0 ? (
@@ -525,6 +536,17 @@ export default function ZoneDetail() {
           zone={zone}
           onClose={() => setShowArchiveModal(false)}
           onConfirm={handleArchive}
+        />
+      )}
+
+      {showCreateSubZoneModal && (
+        <CreateSubZoneModal
+          parentZone={zone}
+          onClose={() => setShowCreateSubZoneModal(false)}
+          onSuccess={() => {
+            setShowCreateSubZoneModal(false);
+            loadZone();
+          }}
         />
       )}
     </div>
@@ -779,6 +801,207 @@ function ConfirmArchiveModal({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateSubZoneModal({
+  parentZone,
+  onClose,
+  onSuccess,
+}: {
+  parentZone: Zone;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    label: 'Zone',
+    leadVetId: '',
+    technicianGracePeriodHours: parentZone.technicianGracePeriodHours, // Inherit from parent
+  });
+  const [vets, setVets] = useState<any[]>([]);
+  const [loadingVets, setLoadingVets] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadVets();
+  }, []);
+
+  const loadVets = async () => {
+    try {
+      setLoadingVets(true);
+      const users = await userApi.getUsers({ limit: 100 });
+      setVets(users.filter((u) => u.role === 'vet'));
+    } catch (err) {
+      console.error('Failed to load vets:', err);
+    } finally {
+      setLoadingVets(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+      await zoneApi.createZone({
+        name: formData.name,
+        label: formData.label,
+        parentZoneId: parentZone.id, // Set parent to current zone
+        leadVetId: formData.leadVetId || undefined,
+        technicianGracePeriodHours: formData.technicianGracePeriodHours,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create sub-zone');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-card flex items-center justify-between p-6 border-b border-border">
+          <div>
+            <h2 className="text-xl font-semibold text-ink">Create Sub-zone</h2>
+            <p className="text-sm text-ink-secondary mt-1">
+              Creating under <span className="font-medium text-brand">{parentZone.name}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className="bg-danger-bg border border-danger-border rounded-lg p-3 text-sm text-danger-text">
+              {error}
+            </div>
+          )}
+
+          <div className="bg-brand-bg border border-brand/20 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Building2 size={20} className="text-brand flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-ink">Parent Zone</p>
+                <p className="text-sm text-ink-secondary">
+                  {parentZone.name} <span className="text-xs">({parentZone.label})</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-ink mb-1.5">
+              Sub-zone Name <span className="text-danger-text">*</span>
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., North District, Urban Sector"
+              required
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink placeholder-ink-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="label" className="block text-sm font-medium text-ink mb-1.5">
+              Zone Type
+            </label>
+            <select
+              id="label"
+              value={formData.label}
+              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            >
+              <option value="Zone">Zone</option>
+              <option value="Region">Region</option>
+              <option value="Province">Province</option>
+              <option value="District">District</option>
+              <option value="Sector">Sector</option>
+              <option value="Cell">Cell</option>
+              <option value="Village">Village</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="leadVet" className="block text-sm font-medium text-ink mb-1.5">
+              Lead Veterinarian (Optional)
+            </label>
+            <select
+              id="leadVet"
+              value={formData.leadVetId}
+              onChange={(e) => setFormData({ ...formData, leadVetId: e.target.value })}
+              disabled={loading || loadingVets}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            >
+              <option value="">No lead vet</option>
+              {vets.map((vet) => (
+                <option key={vet.id} value={vet.id}>
+                  {vet.name} ({vet.email})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ink-secondary mt-1">Assign a vet to lead this sub-zone</p>
+          </div>
+
+          <div>
+            <label htmlFor="gracePeriod" className="block text-sm font-medium text-ink mb-1.5">
+              Grace Period (hours)
+            </label>
+            <input
+              id="gracePeriod"
+              type="number"
+              min="1"
+              value={formData.technicianGracePeriodHours}
+              onChange={(e) =>
+                setFormData({ ...formData, technicianGracePeriodHours: parseInt(e.target.value) })
+              }
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+            />
+            <p className="text-xs text-ink-secondary mt-1">
+              Inherited from parent zone ({parentZone.technicianGracePeriodHours}h), can be customized
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={loading || !formData.name.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? (
+                <>
+                  <Loader size={18} className="animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Check size={18} />
+                  Create Sub-zone
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-4 py-2.5 bg-bg border border-border text-ink rounded-lg hover:bg-card transition-colors disabled:opacity-50 font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
