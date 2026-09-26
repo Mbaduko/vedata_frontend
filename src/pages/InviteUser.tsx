@@ -1,13 +1,12 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { invitationApi, zoneApi, type Zone, ApiError } from '../services/api';
+import { invitationApi, zoneApi, featureApi, type Zone, ApiError } from '../services/api';
 import {
   Loader,
   AlertCircle,
   CheckCircle,
   Mail,
-  Shield,
   Stethoscope,
   Wrench,
   MapPin,
@@ -17,7 +16,6 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { useEffect } from 'react';
 
 const roleOptions = [
   {
@@ -25,7 +23,7 @@ const roleOptions = [
     label: 'Veterinarian',
     icon: Stethoscope,
     description: 'Manage animals, vaccinations, and team members in zones',
-    allowedFor: ['superadmin'],
+    allowedFor: ['superadmin', 'vet'], // Added 'vet' here
   },
   {
     value: 'technician',
@@ -50,6 +48,8 @@ export default function InviteUser() {
   
   const [zones, setZones] = useState<Zone[]>([]);
   const [loadingZones, setLoadingZones] = useState(false);
+  const [vetToVetEnabled, setVetToVetEnabled] = useState(false);
+  const [loadingFeatures, setLoadingFeatures] = useState(true);
   
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,22 +60,42 @@ export default function InviteUser() {
   const isSuperadmin = user?.role === 'superadmin';
   const isVet = user?.role === 'vet';
 
-  // Filter role options based on user role
-  const availableRoleOptions = roleOptions.filter(option => 
-    option.allowedFor.includes(user?.role || '')
-  );
+  // Filter role options based on user role AND feature flags
+  const availableRoleOptions = roleOptions.filter(option => {
+    if (!option.allowedFor.includes(user?.role || '')) return false;
+    // For vets, only show 'vet' option if feature is enabled
+    if (isVet && option.value === 'vet' && !vetToVetEnabled) return false;
+    return true;
+  });
 
   useEffect(() => {
-    if (isSuperadmin) {
+    // Load feature flags
+    loadFeatureFlags();
+    
+    // Load zones for both superadmin and vet
+    if (isSuperadmin || isVet) {
       loadZones();
     }
-  }, [isSuperadmin]);
+  }, [isSuperadmin, isVet]);
+
+  const loadFeatureFlags = async () => {
+    try {
+      setLoadingFeatures(true);
+      const features = await featureApi.getFeatureFlags();
+      setVetToVetEnabled(features.vetToVetInvitation);
+    } catch (err) {
+      console.error('Failed to load feature flags:', err);
+      setVetToVetEnabled(false);
+    } finally {
+      setLoadingFeatures(false);
+    }
+  };
 
   const loadZones = async () => {
     try {
       setLoadingZones(true);
-      const response = await zoneApi.getZones({ limit: 100 });
-      setZones(response.data);
+      const zonesData = await zoneApi.getZones({ limit: 100 });
+      setZones(zonesData || []);
     } catch (err) {
       console.error('Failed to load zones:', err);
     } finally {
@@ -83,7 +103,7 @@ export default function InviteUser() {
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email.trim()) {
@@ -96,11 +116,18 @@ export default function InviteUser() {
       setError(null);
       setSuccess(false);
       
-      // Use different endpoint based on user role
+      // Use different endpoint based on user role and invited role
       const data = isSuperadmin
         ? await invitationApi.inviteUser({
             email: email.trim().toLowerCase(),
             role,
+            zoneId: zoneId || undefined,
+            inviteExpiryHours,
+          })
+        : role === 'vet'
+        ? await invitationApi.inviteUser({
+            email: email.trim().toLowerCase(),
+            role: 'vet',
             zoneId: zoneId || undefined,
             inviteExpiryHours,
           })
@@ -138,9 +165,6 @@ export default function InviteUser() {
     }
   };
 
-  const selectedRole = roleOptions.find(r => r.value === role);
-  const SelectedIcon = selectedRole?.icon || Mail;
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -153,11 +177,17 @@ export default function InviteUser() {
         </button>
         <div>
           <h1 className="text-2xl font-display font-bold text-ink">
-            {isSuperadmin ? 'Invite Veterinarian' : 'Invite Technician'}
+            {isSuperadmin 
+              ? 'Invite Veterinarian'
+              : isVet && role === 'vet'
+              ? 'Invite Veterinarian'
+              : 'Invite Technician'}
           </h1>
           <p className="text-ink-secondary mt-1">
             {isSuperadmin 
               ? 'Send an invitation to a veterinarian to join your system'
+              : isVet && role === 'vet'
+              ? 'Send an invitation to a veterinarian to join your team'
               : 'Send an invitation to a technician to join your team'
             }
           </p>
@@ -215,6 +245,23 @@ export default function InviteUser() {
       {/* Form */}
       <div className="bg-card border border-border rounded-xl p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Feature Disabled Info for Vets - Moved inside form as informational note */}
+          {isVet && !vetToVetEnabled && loadingFeatures === false && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Wrench size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                    Inviting Field Technicians
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    As a veterinarian, you can invite technicians to join your team in your zones.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
@@ -246,8 +293,8 @@ export default function InviteUser() {
             </p>
           </div>
 
-          {/* Role Selection - Only for Superadmin */}
-          {isSuperadmin && (
+          {/* Role Selection - For Superadmin and Vet */}
+          {(isSuperadmin || isVet) && availableRoleOptions.length > 1 && (
             <div>
               <label className="block text-sm font-medium text-ink mb-3">
                 Role <span className="text-red-500">*</span>
@@ -286,14 +333,21 @@ export default function InviteUser() {
                   );
                 })}
               </div>
-              <p className="text-xs text-ink-secondary mt-2">
-                ℹ️ Superadmins can only invite veterinarians
-              </p>
+              {isSuperadmin && (
+                <p className="text-xs text-ink-secondary mt-2">
+                  ℹ️ Superadmins can only invite veterinarians
+                </p>
+              )}
+              {isVet && (
+                <p className="text-xs text-ink-secondary mt-2">
+                  ℹ️ Vets can invite other vets or technicians to zones where they have authority
+                </p>
+              )}
             </div>
           )}
 
-          {/* Role info for Vets */}
-          {isVet && (
+          {/* Role info when only one option */}
+          {isVet && availableRoleOptions.length === 1 && (
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <div className="flex items-start gap-3">
                 <Wrench size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
@@ -309,11 +363,11 @@ export default function InviteUser() {
             </div>
           )}
 
-          {/* Zone Selection (Optional) */}
-          {isSuperadmin && (
+          {/* Zone Selection - For both superadmin and vet inviting vets */}
+          {(isSuperadmin || (isVet && role === 'vet')) && (
             <div>
               <label htmlFor="zoneId" className="block text-sm font-medium text-ink mb-2">
-                Assign to Zone <span className="text-xs text-ink-secondary font-normal">(Optional)</span>
+                Assign to Zone {isVet && role === 'vet' ? <span className="text-red-500">*</span> : <span className="text-xs text-ink-secondary font-normal">(Optional)</span>}
               </label>
               <div className="relative">
                 <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-secondary" />
@@ -321,10 +375,11 @@ export default function InviteUser() {
                   id="zoneId"
                   value={zoneId}
                   onChange={(e) => setZoneId(e.target.value)}
+                  required={isVet && role === 'vet'}
                   disabled={submitting || loadingZones}
                   className="w-full pl-10 pr-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent appearance-none cursor-pointer"
                 >
-                  <option value="">No zone assignment</option>
+                  <option value="">{isVet && role === 'vet' ? 'Select a zone' : 'No zone assignment'}</option>
                   {zones?.map((zone) => (
                     <option key={zone.id} value={zone.id}>
                       {zone.name} ({zone.label})
@@ -336,7 +391,10 @@ export default function InviteUser() {
                 )}
               </div>
               <p className="text-xs text-ink-secondary mt-1.5">
-                User will be automatically assigned to this zone upon registration
+                {isVet && role === 'vet' 
+                  ? 'Select a zone where you have authority (owned or lead vet)'
+                  : 'User will be automatically assigned to this zone upon registration'
+                }
               </p>
             </div>
           )}

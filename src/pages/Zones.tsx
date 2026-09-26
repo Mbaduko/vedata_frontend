@@ -365,8 +365,8 @@ function CreateZoneModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   const loadZones = async () => {
     try {
       setLoadingZones(true);
-      const response = await zoneApi.getZones({ limit: 100 });
-      setZones(response.data || []);
+      const zones = await zoneApi.getZones({ limit: 100 });
+      setZones(zones || []);
     } catch (err) {
       console.error('Failed to load zones:', err);
     } finally {
@@ -377,8 +377,8 @@ function CreateZoneModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   const loadVets = async () => {
     try {
       setLoadingVets(true);
-      const users = await userApi.getUsers({ limit: 100 });
-      setVets(users.filter((u: any) => u.role === 'vet'));
+      const vets = await userApi.getVets({ limit: 100 });
+      setVets(vets);
     } catch (err) {
       console.error('Failed to load vets:', err);
     } finally {

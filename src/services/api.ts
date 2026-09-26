@@ -328,6 +328,8 @@ export interface CreateUserPayload {
 export const userApi = {
   getUsers: (params?: { page?: number; limit?: number; search?: string }) =>
     request<UserRecord[]>('/users?' + new URLSearchParams((params ?? { limit: 100 }) as Record<string, string>).toString()),
+  getVets: (params?: { page?: number; limit?: number; search?: string }) =>
+    request<UserRecord[]>('/users/vets?' + new URLSearchParams((params ?? { limit: 100 }) as Record<string, string>).toString()),
   createUser: (data: CreateUserPayload) =>
     request<UserRecord>('/users', { method: 'POST', body: JSON.stringify(data) }),
 };
@@ -408,6 +410,11 @@ export const invitationApi = {
     }),
 };
 
+export const featureApi = {
+  getFeatureFlags: () =>
+    request<{ vetToVetInvitation: boolean }>('/users/features'),
+};
+
 // Export the base request function for other API modules
 export { request, ApiError };
 export default {
@@ -416,4 +423,5 @@ export default {
   zones: zoneApi,
   species: speciesApi,
   invitations: invitationApi,
+  features: featureApi,
 };

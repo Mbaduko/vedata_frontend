@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { zoneApi, userApi, type Zone, type UserRecord, ApiError } from '../services/api';
+import { zoneApi, userApi, invitationApi, type Zone, type UserRecord, ApiError } from '../services/api';
 import {
   ArrowLeft,
   MapPin,
@@ -38,6 +38,7 @@ export default function ZoneDetail() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showCreateSubZoneModal, setShowCreateSubZoneModal] = useState(false);
+  const [showChangeLeadVetModal, setShowChangeLeadVetModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'subzones'>('overview');
 
   useEffect(() => {
@@ -324,6 +325,15 @@ export default function ZoneDetail() {
                     <p className="text-base font-semibold text-ink">{zone.leadVet.name}</p>
                     <p className="text-sm text-ink-secondary mt-0.5">{zone.leadVet.email}</p>
                   </div>
+                  {hasAuthority && (
+                    <button
+                      onClick={() => setShowChangeLeadVetModal(true)}
+                      className="text-brand hover:text-brand-hover transition-colors"
+                      title="Change Lead Vet"
+                    >
+                      <Edit size={18} />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -336,6 +346,15 @@ export default function ZoneDetail() {
                     <p className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">Lead Veterinarian</p>
                     <p className="text-sm text-ink-secondary">No lead vet assigned</p>
                   </div>
+                  {hasAuthority && (
+                    <button
+                      onClick={() => setShowChangeLeadVetModal(true)}
+                      className="text-brand hover:text-brand-hover transition-colors"
+                      title="Assign Lead Vet"
+                    >
+                      <UserPlus size={18} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -549,6 +568,18 @@ export default function ZoneDetail() {
           }}
         />
       )}
+
+      {showChangeLeadVetModal && (
+        <ChangeLeadVetModal
+          zone={zone}
+          currentUserId={user?.id}
+          onClose={() => setShowChangeLeadVetModal(false)}
+          onSuccess={() => {
+            setShowChangeLeadVetModal(false);
+            loadZone();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -580,8 +611,8 @@ function EditZoneModal({
   const loadVets = async () => {
     try {
       setLoadingVets(true);
-      const users = await userApi.getUsers({ limit: 100 });
-      setVets(users.filter((u) => u.role === 'vet'));
+      const vets = await userApi.getVets({ limit: 100 });
+      setVets(vets);
     } catch (err) {
       console.error('Failed to load vets:', err);
     } finally {
@@ -833,8 +864,8 @@ function CreateSubZoneModal({
   const loadVets = async () => {
     try {
       setLoadingVets(true);
-      const users = await userApi.getUsers({ limit: 100 });
-      setVets(users.filter((u) => u.role === 'vet'));
+      const vets = await userApi.getVets({ limit: 100 });
+      setVets(vets);
     } catch (err) {
       console.error('Failed to load vets:', err);
     } finally {
@@ -1002,6 +1033,323 @@ function CreateSubZoneModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function ChangeLeadVetModal({
+  zone,
+  currentUserId,
+  onClose,
+  onSuccess,
+}: {
+  zone: Zone;
+  currentUserId?: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selectedVetId, setSelectedVetId] = useState<string>(zone.leadVetId || '');
+  const [vets, setVets] = useState<any[]>([]);
+  const [loadingVets, setLoadingVets] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  useEffect(() => {
+    loadVets();
+  }, []);
+
+  const loadVets = async () => {
+    try {
+      setLoadingVets(true);
+      const vets = await userApi.getVets({ limit: 100 });
+      setVets(vets);
+    } catch (err) {
+      console.error('Failed to load vets:', err);
+      setError('Failed to load veterinarians');
+    } finally {
+      setLoadingVets(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+      await zoneApi.updateZone(zone.id, {
+        leadVetId: selectedVetId || null,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update lead vet');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+
+    try {
+      setInviting(true);
+      setError(null);
+      await invitationApi.inviteUser({
+        email: inviteEmail,
+        role: 'vet',
+        zoneId: zone.id,
+      });
+      setInviteSuccess(true);
+      setInviteEmail('');
+      setTimeout(() => {
+        setInviteSuccess(false);
+        setShowInviteForm(false);
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to send invitation');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  // Separate vets into team members (in this zone) and others
+  // Exclude current user from selection (prevent self-appointment)
+  const teamVets = vets.filter((vet) =>
+    vet.id !== currentUserId &&
+    zone.userZoneRoles?.some((uzr: any) => uzr.user.id === vet.id && uzr.user.role === 'vet')
+  );
+  const otherVets = vets.filter((vet) =>
+    vet.id !== currentUserId &&
+    !zone.userZoneRoles?.some((uzr: any) => uzr.user.id === vet.id)
+  );
+
+  const currentLeadVet = vets.find((v) => v.id === zone.leadVetId);
+  const selectedVet = vets.find((v) => v.id === selectedVetId);
+  const hasChanges = selectedVetId !== (zone.leadVetId || '');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-card flex items-center justify-between p-6 border-b border-border">
+          <div>
+            <h2 className="text-xl font-semibold text-ink">
+              {zone.leadVet ? 'Change Lead Veterinarian' : 'Assign Lead Veterinarian'}
+            </h2>
+            <p className="text-sm text-ink-secondary mt-1">
+              For zone: <span className="font-medium text-brand">{zone.name}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {error && (
+            <div className="bg-danger-bg border border-danger-border rounded-lg p-3 text-sm text-danger-text flex items-start gap-2">
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {inviteSuccess && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-600 flex items-start gap-2">
+              <Check size={16} className="flex-shrink-0 mt-0.5" />
+              <span>Invitation sent successfully!</span>
+            </div>
+          )}
+
+          {/* Current Lead Vet */}
+          {currentLeadVet && (
+            <div className="bg-brand-bg border border-brand/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck size={20} className="text-brand flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-brand uppercase tracking-wide mb-1">
+                    Current Lead Vet
+                  </p>
+                  <p className="text-sm font-semibold text-ink">{currentLeadVet.name}</p>
+                  <p className="text-xs text-ink-secondary">{currentLeadVet.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!currentLeadVet && (
+            <div className="bg-bg border border-border rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck size={20} className="text-ink-secondary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
+                    Current Lead Vet
+                  </p>
+                  <p className="text-sm text-ink-secondary">No lead vet assigned</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Selection Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="leadVet" className="block text-sm font-medium text-ink">
+                  Select Lead Veterinarian
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowInviteForm(!showInviteForm)}
+                  className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-hover transition-colors font-medium"
+                >
+                  <UserPlus size={14} />
+                  {showInviteForm ? 'Cancel Invite' : 'Invite New Vet'}
+                </button>
+              </div>
+
+              <select
+                id="leadVet"
+                value={selectedVetId}
+                onChange={(e) => setSelectedVetId(e.target.value)}
+                disabled={loading || loadingVets}
+                className="w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+              >
+                <option value="">No lead vet (Remove current)</option>
+                
+                {teamVets.length > 0 && (
+                  <optgroup label="─── Team Members in This Zone ───">
+                    {teamVets.map((vet) => (
+                      <option key={vet.id} value={vet.id}>
+                        👥 {vet.name} ({vet.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+
+                {otherVets.length > 0 && (
+                  <optgroup label="─── Other Veterinarians ───">
+                    {otherVets.map((vet) => (
+                      <option key={vet.id} value={vet.id}>
+                        {vet.name} ({vet.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              <p className="text-xs text-ink-secondary mt-1">
+                Lead vet has full authority over this specific zone
+              </p>
+            </div>
+
+            {/* Invite Form */}
+            {showInviteForm && (
+              <div className="bg-brand-bg/30 border border-brand/30 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-2 mb-2">
+                  <UserPlus size={18} className="text-brand flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-ink">Invite New Veterinarian</p>
+                    <p className="text-xs text-ink-secondary">
+                      Send an invitation to join as a vet in this zone
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="Enter email address"
+                    disabled={inviting}
+                    className="flex-1 px-3 py-2 bg-bg border border-border rounded-lg text-ink placeholder-ink-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleInvite}
+                    disabled={inviting || !inviteEmail.trim()}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 text-sm font-medium"
+                  >
+                    {inviting ? (
+                      <>
+                        <Loader size={14} className="animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={14} />
+                        Send Invite
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Preview of New Selection */}
+            {hasChanges && selectedVet && (
+              <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Check size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">
+                      New Lead Vet
+                    </p>
+                    <p className="text-sm font-semibold text-ink">{selectedVet.name}</p>
+                    <p className="text-xs text-ink-secondary">{selectedVet.email}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasChanges && !selectedVetId && (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">
+                      Removing Lead Vet
+                    </p>
+                    <p className="text-sm text-ink-secondary">
+                      Zone will have no lead veterinarian. Only the owner and superadmins will have
+                      authority.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-4">
+              <button
+                type="submit"
+                disabled={loading || !hasChanges || loadingVets}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-on-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? (
+                  <>
+                    <Loader size={18} className="animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    {selectedVetId ? 'Assign Lead Vet' : 'Remove Lead Vet'}
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="px-4 py-2.5 bg-bg border border-border text-ink rounded-lg hover:bg-card transition-colors disabled:opacity-50 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
