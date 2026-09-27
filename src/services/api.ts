@@ -300,6 +300,144 @@ export const speciesApi = {
   deleteBreed: (id: string) => request<void>(`/species/breeds/${id}`, { method: 'DELETE' }),
 };
 
+// Owner API
+export interface Owner {
+  id: string;
+  nid: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  address?: string | null;
+  zoneId: string;
+  createdAt: string;
+  updatedAt: string;
+  zone?: { id: string; name: string };
+  _count?: { animals: number };
+  animals?: Animal[];
+}
+
+export interface CreateOwnerPayload {
+  nid: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  zoneId: string;
+}
+
+export interface UpdateOwnerPayload {
+  name?: string;
+  phone?: string;
+  email?: string | null;
+  address?: string | null;
+}
+
+export const ownerApi = {
+  getOwners: (params?: { page?: number; limit?: number; search?: string; zoneId?: string }) =>
+    request<Owner[]>('/owners?' + new URLSearchParams(params as any).toString()),
+  getOwner: (id: string) => request<Owner>(`/owners/${id}`),
+  searchOwnerByNid: (nid: string) =>
+    request<Owner[]>(`/owners?search=${encodeURIComponent(nid)}`),
+  createOwner: (data: CreateOwnerPayload) =>
+    request<Owner>('/owners', { method: 'POST', body: JSON.stringify(data) }),
+  updateOwner: (id: string, data: UpdateOwnerPayload) =>
+    request<Owner>(`/owners/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+};
+
+// Animal API
+export interface Animal {
+  id: string;
+  tagNumber: string;
+  speciesId: string;
+  breedId?: string | null;
+  sex: 'male' | 'female';
+  dateOfBirth: string;
+  ownerId: string;
+  zoneId: string;
+  healthStatus: 'healthy' | 'sick' | 'under_treatment' | 'deceased';
+  deceasedReason?: string | null;
+  deceasedDate?: string | null;
+  registeredAt: string;
+  enteredByUserId: string;
+  editableUntil?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  species?: { id: string; name: string };
+  breed?: { id: string; name: string } | null;
+  owner?: { id: string; name: string; nid: string; phone?: string; email?: string };
+  zone?: { id: string; name: string };
+  enteredBy?: { id: string; name: string };
+  vaccinations?: Vaccination[];
+}
+
+export interface CreateAnimalPayload {
+  tagNumber: string;
+  speciesId: string;
+  breedId?: string;
+  sex: 'male' | 'female';
+  dateOfBirth: string;
+  ownerId: string;
+  zoneId: string;
+  healthStatus?: 'healthy' | 'sick' | 'under_treatment';
+}
+
+export interface UpdateAnimalPayload {
+  speciesId?: string;
+  breedId?: string | null;
+  sex?: 'male' | 'female';
+  dateOfBirth?: string;
+  healthStatus?: 'healthy' | 'sick' | 'under_treatment';
+}
+
+export interface MarkDeceasedPayload {
+  reason: string;
+  date: string;
+}
+
+export interface Vaccination {
+  id: string;
+  animalId: string;
+  vaccineId: string;
+  doseNumber: number;
+  dateAdministered: string;
+  batchNumber: string;
+  administeredByUserId: string;
+  nextDueDate?: string | null;
+  photoEvidenceUrl?: string | null;
+  gpsLat?: number | null;
+  gpsLng?: number | null;
+  editableUntil?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vaccine?: {
+    id: string;
+    name: string;
+    disease: { name: string };
+  };
+}
+
+export const animalApi = {
+  getAnimals: (params?: { 
+    page?: number; 
+    limit?: number; 
+    search?: string; 
+    speciesId?: string;
+    healthStatus?: string;
+    zoneId?: string;
+    ownerId?: string;
+  }) =>
+    request<Animal[]>('/animals?' + new URLSearchParams(params as any).toString()),
+  getAnimal: (id: string) => request<Animal>(`/animals/${id}`),
+  createAnimal: (data: CreateAnimalPayload) =>
+    request<Animal>('/animals', { method: 'POST', body: JSON.stringify(data) }),
+  updateAnimal: (id: string, data: UpdateAnimalPayload) =>
+    request<Animal>(`/animals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  markDeceased: (id: string, data: MarkDeceasedPayload) =>
+    request<Animal>(`/animals/${id}/deceased`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteAnimal: (id: string) =>
+    request<void>(`/animals/${id}`, { method: 'DELETE' }),
+};
+
 // User API (admin)
 export type UserRecord = {
   id: string;
@@ -422,6 +560,8 @@ export default {
   dashboard: dashboardApi,
   zones: zoneApi,
   species: speciesApi,
+  owners: ownerApi,
+  animals: animalApi,
   invitations: invitationApi,
   features: featureApi,
 };

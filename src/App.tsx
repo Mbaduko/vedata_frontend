@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DataProvider } from './context/DataContext';
 import {
   LayoutDashboard, MapPin, Dog, Users, Syringe, Settings, FileText,
   Shield, Stethoscope, Wrench, LogOut, Sun, Moon, Menu, X,
@@ -246,7 +247,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <DataProvider>
+          <AppRoutes />
+        </DataProvider>
       </AuthProvider>
     </BrowserRouter>
   );
