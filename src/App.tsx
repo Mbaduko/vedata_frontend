@@ -4,7 +4,7 @@ import { DataProvider } from './context/DataContext';
 import {
   LayoutDashboard, MapPin, Dog, Users, Syringe, Settings, FileText,
   Shield, Stethoscope, Wrench, LogOut, Sun, Moon, Menu, X,
-  AlertCircle, Activity, Loader, type LucideIcon
+  Activity, Loader, type LucideIcon
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
@@ -18,8 +18,12 @@ import AnimalDetail from './pages/AnimalDetail';
 import AnimalRegister from './pages/AnimalRegister';
 import Owners from './pages/Owners';
 import OwnerDetail from './pages/OwnerDetail';
-import VaccinationRecord from './pages/VaccinationRecord';
-import VaccinationsDue from './pages/VaccinationsDue';
+import VaccinationDashboard from './pages/VaccinationDashboard';
+import DueVaccinations from './pages/DueVaccinations';
+import RecordVaccination from './pages/RecordVaccination';
+import VaccinationProtocols from './pages/VaccinationProtocols';
+import VaccinationProtocolDetail from './pages/VaccinationProtocolDetail';
+import VaccinationProtocolForm from './pages/VaccinationProtocolForm';
 import ConfigDiseases from './pages/ConfigDiseases';
 import ConfigSpecies from './pages/ConfigSpecies';
 import Team from './pages/Team';
@@ -66,8 +70,8 @@ const navItems: NavItem[] = [
   { path: '/animals', label: 'Animals', icon: Dog, roles: ['vet', 'technician'] },
   { path: '/animals/register', label: 'Register Animal', icon: Dog, roles: ['vet', 'technician'], hidden: true },
   { path: '/owners', label: 'Owners', icon: Users, roles: ['vet', 'technician'] },
-  { path: '/vaccinations/record', label: 'Record Vaccination', icon: Syringe, roles: ['vet', 'technician'], hidden: true },
-  { path: '/vaccinations/due', label: 'Due Vaccinations', icon: AlertCircle, roles: ['vet', 'technician'] },
+  { path: '/vaccinations/record', label: 'Record Vaccination', icon: Syringe, roles: ['superadmin', 'vet', 'technician'], hidden: true },
+  { path: '/vaccinations', label: 'Vaccinations', icon: Syringe, roles: ['superadmin', 'vet', 'technician'] },
   { path: '/team', label: 'Team', icon: Users, roles: ['vet'] },
   { path: '/my-activity', label: 'My Activity', icon: Activity, roles: ['technician'] },
   { path: '/config/species', label: 'Species Config', icon: Settings, roles: ['superadmin', 'vet'] },
@@ -225,8 +229,13 @@ function AppRoutes() {
       <Route path="/animals/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><AnimalDetail /></Layout></RequireAuth>} />
       <Route path="/owners" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><Owners /></Layout></RequireAuth>} />
       <Route path="/owners/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><OwnerDetail /></Layout></RequireAuth>} />
-      <Route path="/vaccinations/record" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationRecord /></Layout></RequireAuth>} />
-      <Route path="/vaccinations/due" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationsDue /></Layout></RequireAuth>} />
+      <Route path="/vaccinations" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationDashboard /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/record" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><RecordVaccination /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/due" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><DueVaccinations /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/protocols" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationProtocols /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/protocols/new" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><VaccinationProtocolForm /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/protocols/:id" element={<RequireAuth allowedRoles={['superadmin', 'vet', 'technician']}><Layout><VaccinationProtocolDetail /></Layout></RequireAuth>} />
+      <Route path="/vaccinations/protocols/:id/edit" element={<RequireAuth allowedRoles={['superadmin', 'vet']}><Layout><VaccinationProtocolForm /></Layout></RequireAuth>} />
       <Route path="/team" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><Team /></Layout></RequireAuth>} />
       <Route path="/team/invite" element={<RequireAuth allowedRoles={['vet']}><Layout><InviteUser /></Layout></RequireAuth>} />
       <Route path="/team/:id" element={<RequireAuth allowedRoles={['vet', 'superadmin']}><Layout><TechnicianDetail /></Layout></RequireAuth>} />

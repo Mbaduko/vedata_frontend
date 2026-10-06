@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { dashboardApi, type DashboardData } from '../services/api';
+import { dashboardApi, vaccinationApi, type DashboardData, type VaccinationMetrics } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   TrendingUp,
@@ -186,6 +186,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column - 2/3 width */}
         <div className="xl:col-span-2 space-y-6">
+          {dashboard.widgets.includes('vaccinations') && (
+            <VaccinationMetricsSection />
+          )}
+
           {dashboard.widgets.includes('due-vaccinations') && dashboard.dueVaccinations && (
             <DueVaccinationsWidget vaccinations={dashboard.dueVaccinations} />
           )}
@@ -353,6 +357,71 @@ function MetricCard({
         <p className="text-2xl font-bold text-ink mb-1">{value.toLocaleString()}</p>
         <p className="text-xs text-ink-secondary">{label}</p>
       </div>
+    </div>
+  );
+}
+
+// Vaccination Coverage Widget (protocol-based metrics)
+function VaccinationMetricsSection() {
+  const [metrics, setMetrics] = useState<VaccinationMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    vaccinationApi
+      .getVaccinationMetrics()
+      .then((data) => {
+        if (!cancelled) setMetrics(data);
+      })
+      .catch(() => {
+        // widget degrades gracefully — metrics stay at zero
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const stats = [
+    { icon: AlertCircle, label: 'Overdue', value: metrics?.overdue ?? 0 },
+    { icon: Clock, label: 'Due This Week', value: metrics?.dueThisWeek ?? 0 },
+    { icon: Calendar, label: 'Upcoming 30d', value: metrics?.upcoming ?? 0 },
+    { icon: CheckCircle, label: 'Completed', value: metrics?.completed ?? 0 },
+  ];
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Syringe size={20} className="text-brand" />
+          <h2 className="text-lg font-semibold text-ink">Vaccination Coverage</h2>
+        </div>
+        <Link
+          to="/vaccinations"
+          className="text-sm text-brand hover:underline flex items-center gap-1"
+        >
+          Open <ArrowRight size={14} />
+        </Link>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader size={24} className="text-brand animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="p-4 bg-bg border border-border rounded-lg">
+              <div className="flex items-center gap-2 text-ink-secondary">
+                <stat.icon size={14} />
+                <p className="text-xs font-medium uppercase tracking-wide">{stat.label}</p>
+              </div>
+              <p className="text-2xl font-bold text-ink mt-1 tabular-nums">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

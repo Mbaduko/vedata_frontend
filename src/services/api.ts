@@ -553,6 +553,229 @@ export const featureApi = {
     request<{ vetToVetInvitation: boolean }>('/users/features'),
 };
 
+// Disease & Vaccine API (used by protocol configuration)
+export interface Disease {
+  id: string;
+  name: string;
+  species?: Array<{
+    diseaseId: string;
+    speciesId: string;
+    species?: { id: string; name: string };
+  }>;
+  vaccines?: Vaccine[];
+}
+
+export interface Vaccine {
+  id: string;
+  name: string;
+  diseaseId: string;
+  manufacturer?: string | null;
+}
+
+export const diseaseApi = {
+  getDiseases: () => request<Disease[]>('/diseases'),
+  getVaccines: (diseaseId: string) =>
+    request<Vaccine[]>(`/diseases/${diseaseId}/vaccines`),
+};
+
+// ─── Vaccination Protocol API ────────────────────────────────────
+
+export type VaccinationProtocol = {
+  id: string;
+  name: string;
+  diseaseId: string;
+  speciesId: string;
+  description?: string | null;
+  isActive: boolean;
+  createdByUserId: string;
+  zoneId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  disease: { id: string; name: string };
+  species: { id: string; name: string };
+  createdBy: { id: string; name: string; email: string };
+  zone?: { id: string; name: string } | null;
+  doses: ProtocolDose[];
+  _count?: { animalEnrollments: number };
+}
+
+export interface ProtocolDose {
+  id: string;
+  protocolId: string;
+  doseNumber: number;
+  daysFromPrevious: number;
+  isRecurring: boolean;
+  recurringIntervalDays?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  allowedVaccines: Array<{
+    protocolDoseId: string;
+    vaccineId: string;
+    vaccine: Vaccine;
+  }>;
+}
+
+/** Protocol shape as embedded in an enrollment (no createdBy/zone/_count). */
+export interface EnrollmentProtocol {
+  id: string;
+  name: string;
+  diseaseId: string;
+  speciesId: string;
+  description?: string | null;
+  isActive: boolean;
+  disease: { id: string; name: string };
+  species: { id: string; name: string };
+  doses: ProtocolDose[];
+}
+
+export type AnimalVaccinationEnrollment = {
+  id: string;
+  animalId: string;
+  protocolId: string;
+  enrolledAt: string;
+  enrolledByUserId: string;
+  status: 'active' | 'completed' | 'discontinued';
+  currentDose: number;
+  discontinuedReason?: string | null;
+  discontinuedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  protocol: EnrollmentProtocol;
+  animal?: {
+    id: string;
+    tagNumber: string;
+    healthStatus: string;
+    species: { id: string; name: string };
+    owner: { id: string; name: string; phone: string };
+    zone: { id: string; name: string };
+  };
+  vaccinations?: Vaccination[];
+}
+
+export type DueVaccination = {
+  id: string;
+  animal: {
+    id: string;
+    tagNumber: string;
+    species: string;
+    owner: {
+      name: string;
+      phone: string;
+    };
+  };
+  protocol: {
+    name: string;
+    disease: string;
+  };
+  currentDose: number;
+  nextDoseNumber: number;
+  totalDoses: number;
+  nextDueDate: string;
+  lastVaccination: {
+    date: string;
+    vaccine: string;
+  };
+}
+
+export interface VaccinationMetrics {
+  overdue: number;
+  dueThisWeek: number;
+  upcoming: number;
+  completed: number;
+}
+
+const toQuery = (params: Record<string, string | number | boolean | undefined>): string =>
+  new URLSearchParams(
+    Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== '')
+      .map(([key, value]) => [key, String(value)]),
+  ).toString();
+
+export const vaccinationApi = {
+  // Protocols
+  getProtocols: (params?: { speciesId?: string; diseaseId?: string; isActive?: boolean }) =>
+    request<VaccinationProtocol[]>(`/vaccinations/protocols?${toQuery(params ?? {})}`),
+
+  getProtocol: (id: string) =>
+    request<VaccinationProtocol>(`/vaccinations/protocols/${id}`),
+
+  createProtocol: (data: {
+    name: string;
+    diseaseId: string;
+    speciesId: string;
+    description?: string;
+    zoneId?: string;
+    doses: Array<{
+      doseNumber: number;
+      daysFromPrevious: number;
+      isRecurring?: boolean;
+      recurringIntervalDays?: number;
+      vaccineIds: string[];
+    }>;
+  }) =>
+    request<VaccinationProtocol>('/vaccinations/protocols', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateProtocol: (id: string, data: { name?: string; description?: string; isActive?: boolean }) =>
+    request<VaccinationProtocol>(`/vaccinations/protocols/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  archiveProtocol: (id: string) =>
+    request<VaccinationProtocol>(`/vaccinations/protocols/${id}/archive`, {
+      method: 'POST',
+    }),
+
+  // Enrollments
+  enrollAnimal: (data: { animalId: string; protocolId: string }) =>
+    request<AnimalVaccinationEnrollment>('/vaccinations/enrollments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  discontinueEnrollment: (id: string, data: { reason: string }) =>
+    request<AnimalVaccinationEnrollment>(`/vaccinations/enrollments/${id}/discontinue`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getAnimalEnrollments: (animalId: string) =>
+    request<AnimalVaccinationEnrollment[]>(`/vaccinations/animals/${animalId}/enrollments`),
+
+  getEnrollments: (params?: { protocolId?: string; animalId?: string; status?: string }) =>
+    request<AnimalVaccinationEnrollment[]>(
+      `/vaccinations/enrollments?${toQuery(params ?? {})}`,
+    ),
+
+  // Vaccinations
+  recordVaccination: (data: {
+    animalVaccinationId: string;
+    vaccineId: string;
+    doseNumber: number;
+    batchNumber: string;
+    dateAdministered: string;
+    photoEvidenceUrl?: string;
+    gpsLat?: number;
+    gpsLng?: number;
+    notes?: string;
+  }) =>
+    request<Vaccination>('/vaccinations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getDueVaccinations: (params?: { zoneId?: string; filter?: 'overdue' | 'today' | 'week' | 'all' }) =>
+    request<{ total: number; vaccinations: DueVaccination[] }>(
+      `/vaccinations/due?${toQuery(params ?? {})}`,
+    ),
+
+  getVaccinationMetrics: (params?: { zoneId?: string }) =>
+    request<VaccinationMetrics>(`/vaccinations/metrics?${toQuery(params ?? {})}`),
+};
+
 // Export the base request function for other API modules
 export { request, ApiError };
 export default {
@@ -564,4 +787,6 @@ export default {
   animals: animalApi,
   invitations: invitationApi,
   features: featureApi,
+  diseases: diseaseApi,
+  vaccination: vaccinationApi,
 };
