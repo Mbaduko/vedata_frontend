@@ -576,6 +576,13 @@ export const diseaseApi = {
   getDiseases: () => request<Disease[]>('/diseases'),
   getVaccines: (diseaseId: string) =>
     request<Vaccine[]>(`/diseases/${diseaseId}/vaccines`),
+  createDisease: (data: { name: string; applicableSpeciesIds: string[] }) =>
+    request<Disease>('/diseases', { method: 'POST', body: JSON.stringify(data) }),
+  createVaccine: (diseaseId: string, data: { name: string; manufacturer?: string }) =>
+    request<Vaccine>(`/diseases/${diseaseId}/vaccines`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // ─── Vaccination Protocol API ────────────────────────────────────
@@ -613,6 +620,15 @@ export interface ProtocolDose {
     vaccineId: string;
     vaccine: Vaccine;
   }>;
+}
+
+/** Dose payload for creating a protocol or replacing its schedule. */
+export interface ProtocolDoseInput {
+  doseNumber: number;
+  daysFromPrevious: number;
+  isRecurring?: boolean;
+  recurringIntervalDays?: number;
+  vaccineIds: string[];
 }
 
 /** Protocol shape as embedded in an enrollment (no createdBy/zone/_count). */
@@ -705,20 +721,18 @@ export const vaccinationApi = {
     speciesId: string;
     description?: string;
     zoneId?: string;
-    doses: Array<{
-      doseNumber: number;
-      daysFromPrevious: number;
-      isRecurring?: boolean;
-      recurringIntervalDays?: number;
-      vaccineIds: string[];
-    }>;
+    doses: ProtocolDoseInput[];
   }) =>
     request<VaccinationProtocol>('/vaccinations/protocols', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  updateProtocol: (id: string, data: { name?: string; description?: string; isActive?: boolean }) =>
+  /** `doses` is only accepted while the protocol has no enrollments (409 otherwise). */
+  updateProtocol: (
+    id: string,
+    data: { name?: string; description?: string | null; isActive?: boolean; doses?: ProtocolDoseInput[] },
+  ) =>
     request<VaccinationProtocol>(`/vaccinations/protocols/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -726,6 +740,11 @@ export const vaccinationApi = {
 
   archiveProtocol: (id: string) =>
     request<VaccinationProtocol>(`/vaccinations/protocols/${id}/archive`, {
+      method: 'POST',
+    }),
+
+  restoreProtocol: (id: string) =>
+    request<VaccinationProtocol>(`/vaccinations/protocols/${id}/restore`, {
       method: 'POST',
     }),
 

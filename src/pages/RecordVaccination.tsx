@@ -8,6 +8,7 @@ import {
   type AnimalVaccinationEnrollment,
 } from '../services/api';
 import { AlertCircle, CheckCircle, Loader, Search, X } from 'lucide-react';
+import { resolveNextDose } from '../utils/protocolSchedule';
 
 export default function RecordVaccination() {
   const navigate = useNavigate();
@@ -112,12 +113,11 @@ export default function RecordVaccination() {
     [enrollments],
   );
 
-  const nextDose = selectedEnrollment?.protocol.doses.find(
-    (d) => d.doseNumber === selectedEnrollment.currentDose + 1,
-  );
-  const totalDoses = selectedEnrollment
-    ? selectedEnrollment.protocol.doses.filter((d) => !d.isRecurring).length
-    : 0;
+  // Past the primary series, boosters keep counting up and follow the recurring final dose
+  const resolvedNextDose = selectedEnrollment
+    ? resolveNextDose(selectedEnrollment.protocol.doses, selectedEnrollment.currentDose)
+    : null;
+  const nextDose = resolvedNextDose?.definition;
 
   const handleSubmit = async () => {
     if (!selectedEnrollment || !nextDose) return;
@@ -129,7 +129,7 @@ export default function RecordVaccination() {
       await vaccinationApi.recordVaccination({
         animalVaccinationId: selectedEnrollment.id,
         vaccineId: formData.vaccineId,
-        doseNumber: nextDose.doseNumber,
+        doseNumber: resolvedNextDose!.doseNumber,
         batchNumber: formData.batchNumber,
         dateAdministered: formData.dateAdministered,
         notes: formData.notes || undefined,
@@ -242,7 +242,7 @@ export default function RecordVaccination() {
                                   {enrollment.protocol.name}
                                 </p>
                                 <p className="text-xs text-ink-secondary">
-                                  Dose {enrollment.currentDose + 1} of {totalDosesFor(enrollment)}
+                                  {nextDoseLabel(enrollment)}
                                   {' • '}
                                   {enrollment.protocol.disease.name}
                                 </p>
@@ -313,9 +313,7 @@ export default function RecordVaccination() {
             <p className="text-sm text-ink-secondary mt-2">Protocol</p>
             <p className="font-medium text-ink">{selectedEnrollment.protocol.name}</p>
             <p className="text-sm text-ink-secondary">
-              {nextDose?.isRecurring
-                ? `Booster dose ${nextDose.doseNumber}`
-                : `Dose ${selectedEnrollment.currentDose + 1} of ${totalDoses}`}
+              {nextDoseLabel(selectedEnrollment)}
               {' • '}
               {selectedEnrollment.protocol.disease.name}
             </p>
@@ -428,4 +426,10 @@ export default function RecordVaccination() {
 
 function totalDosesFor(enrollment: AnimalVaccinationEnrollment): number {
   return enrollment.protocol.doses.filter((d) => !d.isRecurring).length;
+}
+
+function nextDoseLabel(enrollment: AnimalVaccinationEnrollment): string {
+  const next = enrollment.currentDose + 1;
+  const total = totalDosesFor(enrollment);
+  return next > total ? `Booster #${next - total}` : `Dose ${next} of ${total}`;
 }
