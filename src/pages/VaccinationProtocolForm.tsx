@@ -11,7 +11,7 @@ import {
   type Zone,
   type Vaccine,
 } from '../services/api';
-import { ArrowLeft, Loader, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader, Plus, Trash2, AlertCircle, CheckCircle, X, Calendar } from 'lucide-react';
 import SmartAutocomplete from '../components/SmartAutocomplete';
 
 interface DoseDraft {
@@ -84,6 +84,7 @@ export default function VaccinationProtocolForm() {
             description: protocol.description ?? '',
             speciesId: protocol.speciesId,
             diseaseId: protocol.diseaseId,
+            diseaseName: protocol.disease.name,
             zoneId: protocol.zoneId ?? '',
           });
           setIsActive(protocol.isActive);
@@ -450,159 +451,303 @@ export default function VaccinationProtocolForm() {
         </div>
       </div>
 
-      {/* Doses */}
-      <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+      {/* Dose Schedule */}
+      <div className="bg-card border border-border rounded-xl p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-ink">Dose Schedule</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Dose Schedule</h2>
+            <p className="text-sm text-ink-secondary mt-1">
+              {isEdit 
+                ? 'Dose schedules are locked after creation to protect active enrollments'
+                : 'Define when each dose should be given and which vaccines are allowed'}
+            </p>
+          </div>
           {!isEdit && (
             <button
-              onClick={() => setDoses((prev) => [...prev, { ...emptyDose }])}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-sm hover:bg-bg"
+              onClick={() => setDoses((prev) => [...prev, { ...emptyDose, daysFromPrevious: prev.length > 0 ? 21 : 0 }])}
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover text-sm font-medium"
+              disabled={!form.diseaseId}
+              title={!form.diseaseId ? "Select a disease first" : "Add another dose"}
             >
-              <Plus size={14} /> Add Dose
+              <Plus size={16} /> Add Dose
             </button>
           )}
         </div>
 
+        {!isEdit && !form.diseaseId && (
+          <div className="p-4 bg-gold-bg border border-gold-border rounded-lg">
+            <p className="text-sm text-gold-text">
+              💡 Select a disease above to start building the dose schedule
+            </p>
+          </div>
+        )}
+
         {!isEdit && vaccines.length === 0 && form.diseaseId && (
-          <p className="text-sm text-gold-text">
-            No vaccines configured for this disease yet — add one under Disease configuration.
-          </p>
+          <div className="p-4 bg-gold-bg border border-gold-border rounded-lg">
+            <p className="text-sm text-gold-text">
+              💡 No vaccines configured for this disease yet. You can create them as you configure each dose below.
+            </p>
+          </div>
         )}
 
         {isEdit ? (
-          <p className="text-sm text-ink-secondary">
-            Dose schedules are locked after creation. Archive this protocol and create a new one
-            to change the schedule.
-          </p>
+          <div className="p-4 bg-muted-bg border border-border rounded-lg">
+            <p className="text-sm text-ink-secondary">
+              Dose schedules cannot be edited after creation. If you need to modify the schedule, 
+              archive this protocol and create a new one with the updated schedule.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-4">
-            {doses.map((dose, index) => (
-              <div key={index} className="p-4 bg-bg border border-border rounded-lg space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="w-7 h-7 rounded-full bg-brand text-on-brand flex items-center justify-center text-xs font-bold">
-                    {index + 1}
-                  </span>
-                  {doses.length > 1 && (
-                    <button
-                      onClick={() => setDoses((prev) => prev.filter((_, i) => i !== index))}
-                      className="p-1.5 text-ink-secondary hover:text-clay-text rounded-lg hover:bg-bg"
-                      title="Remove dose"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+          <div className="space-y-6">
+            {doses.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed border-border rounded-xl">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted-bg mb-3">
+                  <Calendar size={24} className="text-ink-secondary" />
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-ink-secondary mb-1">
-                      Days after previous dose
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={dose.daysFromPrevious}
-                      onChange={(e) =>
-                        updateDose(index, { daysFromPrevious: Number(e.target.value) })
-                      }
-                      disabled={index === 0}
-                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm disabled:opacity-60"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-ink-secondary mb-1">
-                      Recurring booster
-                    </label>
-                    <label className="flex items-center gap-2 py-2 text-sm text-ink">
-                      <input
-                        type="checkbox"
-                        checked={dose.isRecurring}
-                        onChange={(e) => updateDose(index, { isRecurring: e.target.checked })}
-                        className="accent-[var(--brand)]"
-                      />
-                      Repeat this dose
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-ink-secondary mb-1">
-                      Repeat every (days)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={dose.recurringIntervalDays}
-                      onChange={(e) =>
-                        updateDose(index, {
-                          recurringIntervalDays:
-                            e.target.value === '' ? '' : Number(e.target.value),
-                        })
-                      }
-                      disabled={!dose.isRecurring}
-                      placeholder="e.g., 365"
-                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm disabled:opacity-60"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-ink-secondary mb-2">
-                    Vaccines for Dose {index + 1} *
-                  </label>
-                  
-                  {/* Selected vaccines */}
-                  {dose.vaccineIds.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {dose.vaccineIds.map(vaccineId => {
-                        const vaccine = vaccines.find(v => v.id === vaccineId);
-                        if (!vaccine) return null;
-                        return (
-                          <div
-                            key={vaccineId}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-bg border border-brand/20 rounded-lg text-sm"
-                          >
-                            <span className="font-medium text-brand-text">{vaccine.name}</span>
-                            {vaccine.manufacturer && (
-                              <span className="text-xs text-ink-secondary">({vaccine.manufacturer})</span>
-                            )}
-                            <button
-                              onClick={() => toggleVaccine(index, vaccineId)}
-                              className="ml-1 text-brand-text hover:text-brand"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Add vaccine autocomplete */}
-                  <SmartAutocomplete<Vaccine>
-                    label=""
-                    value={vaccineInputs[index] || ''}
-                    onChange={(value, selected) => handleVaccineChange(index, value, selected)}
-                    options={vaccines}
-                    getLabel={(v) => v.name + (v.manufacturer ? ` (${v.manufacturer})` : '')}
-                    placeholder="Type to search or create vaccine..."
-                    disabled={!form.diseaseId || creatingVaccine[index]}
-                    onCreateNew={(name) => handleCreateVaccine(index, name)}
-                    createNewLabel="Create new vaccine"
-                    helpText={!form.diseaseId ? "Select disease first" : "Type to search existing vaccines or create new"}
-                    typoThreshold={75}
-                    minSearchLength={2}
-                  />
-                  
-                  {vaccines.length === 0 && form.diseaseId && (
-                    <p className="mt-2 text-xs text-ink-secondary">
-                      No vaccines yet for this disease. Type a name above to create the first one.
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm text-ink-secondary mb-4">No doses configured yet</p>
+                <button
+                  onClick={() => setDoses([{ ...emptyDose }])}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-brand rounded-lg hover:bg-brand-hover text-sm font-medium"
+                  disabled={!form.diseaseId}
+                >
+                  <Plus size={16} /> Add First Dose
+                </button>
               </div>
-            ))}
+            ) : (
+              <>
+                {/* Timeline visualization */}
+                <div className="relative">
+                  <div className="flex items-start gap-4 overflow-x-auto pb-4">
+                    {doses.map((dose, index) => {
+                      const isLast = index === doses.length - 1;
+                      const cumulativeDays = doses.slice(0, index + 1).reduce((sum, d) => sum + (d.daysFromPrevious || 0), 0);
+                      
+                      return (
+                        <div key={index} className="flex items-start gap-4 shrink-0">
+                          <div className="flex flex-col items-center">
+                            <div className="w-10 h-10 rounded-full bg-brand text-on-brand flex items-center justify-center text-sm font-bold shadow-sm">
+                              {index + 1}
+                            </div>
+                            <div className="mt-2 text-center">
+                              <p className="text-xs font-medium text-ink">
+                                {index === 0 ? 'Day 0' : `Day ${cumulativeDays}`}
+                              </p>
+                              {index > 0 && (
+                                <p className="text-xs text-ink-secondary">
+                                  +{dose.daysFromPrevious}d
+                                </p>
+                              )}
+                              {dose.isRecurring && (
+                                <p className="text-xs text-brand-text mt-1 font-medium">
+                                  🔄 Every {dose.recurringIntervalDays}d
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {!isLast && (
+                            <div className="flex items-center pt-5">
+                              <div className="h-px w-16 bg-border"></div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Dose configurations */}
+                <div className="space-y-4">
+                  {doses.map((dose, index) => (
+                    <div key={index} className="relative bg-bg border-2 border-border rounded-xl p-6 space-y-5 hover:border-brand/30 transition-colors">
+                      {/* Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-brand text-on-brand flex items-center justify-center text-sm font-bold">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <h3 className="text-base font-semibold text-ink">
+                              Dose {index + 1}
+                              {dose.isRecurring && (
+                                <span className="ml-2 text-xs text-brand-text font-normal px-2 py-0.5 bg-brand-bg rounded-full">
+                                  🔄 Recurring Booster
+                                </span>
+                              )}
+                            </h3>
+                            <p className="text-xs text-ink-secondary mt-0.5">
+                              {index === 0 
+                                ? 'Initial dose (Day 0)' 
+                                : `Given ${dose.daysFromPrevious || 0} days after dose ${index}`}
+                            </p>
+                          </div>
+                        </div>
+                        {doses.length > 1 && (
+                          <button
+                            onClick={() => setDoses((prev) => prev.filter((_, i) => i !== index))}
+                            className="p-2 text-ink-secondary hover:text-clay-text rounded-lg hover:bg-card transition-colors"
+                            title="Remove this dose"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Timing Configuration */}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Days from previous */}
+                          <div>
+                            <label className="block text-sm font-medium text-ink mb-2">
+                              {index === 0 ? 'Initial Dose' : 'Days After Previous Dose'} *
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min={0}
+                                value={dose.daysFromPrevious}
+                                onChange={(e) =>
+                                  updateDose(index, { daysFromPrevious: Math.max(0, Number(e.target.value)) })
+                                }
+                                disabled={index === 0}
+                                className="w-full px-4 py-2.5 bg-card border border-border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                placeholder={index === 0 ? "0" : "e.g., 21"}
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-secondary">
+                                days
+                              </span>
+                            </div>
+                            {index === 0 && (
+                              <p className="text-xs text-ink-secondary mt-1">
+                                First dose is always on day 0
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Recurring configuration */}
+                          <div>
+                            <label className="block text-sm font-medium text-ink mb-2">
+                              Recurring Schedule
+                            </label>
+                            <div className="flex items-center gap-3 h-[42px] px-4 py-2.5 bg-card border border-border rounded-lg">
+                              <input
+                                type="checkbox"
+                                id={`recurring-${index}`}
+                                checked={dose.isRecurring}
+                                onChange={(e) => updateDose(index, { 
+                                  isRecurring: e.target.checked,
+                                  recurringIntervalDays: e.target.checked && !dose.recurringIntervalDays ? 365 : dose.recurringIntervalDays
+                                })}
+                                className="w-4 h-4 accent-brand cursor-pointer"
+                              />
+                              <label htmlFor={`recurring-${index}`} className="text-sm text-ink cursor-pointer select-none">
+                                This is a recurring booster
+                              </label>
+                            </div>
+                            <p className="text-xs text-ink-secondary mt-1">
+                              Check if this dose repeats periodically (e.g., annual booster)
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Recurring interval (shown only when recurring is enabled) */}
+                        {dose.isRecurring && (
+                          <div className="p-4 bg-brand-bg border border-brand/20 rounded-lg">
+                            <label className="block text-sm font-medium text-brand-text mb-2">
+                              Repeat Every (Days) *
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min={1}
+                                value={dose.recurringIntervalDays}
+                                onChange={(e) =>
+                                  updateDose(index, {
+                                    recurringIntervalDays:
+                                      e.target.value === '' ? '' : Math.max(1, Number(e.target.value)),
+                                  })
+                                }
+                                placeholder="e.g., 365 for annual"
+                                className="w-full px-4 py-2.5 bg-card border border-brand/30 rounded-lg focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-secondary">
+                                days
+                              </span>
+                            </div>
+                            <p className="text-xs text-brand-text/80 mt-2">
+                              💡 Common intervals: 365 days (annual), 180 days (bi-annual), 90 days (quarterly)
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Vaccine Selection */}
+                      <div className="space-y-3 pt-2 border-t border-border">
+                        <label className="block text-sm font-medium text-ink">
+                          Allowed Vaccines for Dose {index + 1} *
+                        </label>
+                        
+                        {/* Selected vaccines */}
+                        {dose.vaccineIds.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {dose.vaccineIds.map(vaccineId => {
+                              const vaccine = vaccines.find(v => v.id === vaccineId);
+                              if (!vaccine) return null;
+                              return (
+                                <div
+                                  key={vaccineId}
+                                  className="group flex items-center gap-2 px-3 py-2 bg-brand-bg border border-brand/30 rounded-lg text-sm hover:border-brand transition-colors"
+                                >
+                                  <CheckCircle size={14} className="text-brand shrink-0" />
+                                  <span className="font-medium text-brand-text">{vaccine.name}</span>
+                                  {vaccine.manufacturer && (
+                                    <span className="text-xs text-ink-secondary">({vaccine.manufacturer})</span>
+                                  )}
+                                  <button
+                                    onClick={() => toggleVaccine(index, vaccineId)}
+                                    className="ml-1 p-1 text-brand-text/60 hover:text-clay-text hover:bg-brand/20 rounded transition-colors"
+                                    title="Remove vaccine"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-gold-bg border border-gold-border rounded-lg">
+                            <p className="text-xs text-gold-text">
+                              ⚠️ No vaccines selected yet. Add at least one vaccine for this dose.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Add vaccine autocomplete */}
+                        <SmartAutocomplete<Vaccine>
+                          label=""
+                          value={vaccineInputs[index] || ''}
+                          onChange={(value, selected) => handleVaccineChange(index, value, selected)}
+                          options={vaccines.filter(v => !dose.vaccineIds.includes(v.id))}
+                          getLabel={(v) => v.name + (v.manufacturer ? ` (${v.manufacturer})` : '')}
+                          placeholder="Type to search existing vaccines or create new..."
+                          disabled={!form.diseaseId || creatingVaccine[index]}
+                          onCreateNew={(name) => handleCreateVaccine(index, name)}
+                          createNewLabel="Create new vaccine"
+                          helpText={
+                            !form.diseaseId 
+                              ? "Select disease first" 
+                              : vaccines.length === 0
+                              ? "No vaccines configured. Type a name to create the first one."
+                              : "Search existing vaccines or type a new name to create one"
+                          }
+                          typoThreshold={75}
+                          minSearchLength={2}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
