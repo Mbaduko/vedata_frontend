@@ -68,7 +68,7 @@ export default function AnimalDetail() {
         <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-display font-semibold text-ink">Vaccination History</h2>
-            <button onClick={() => navigate('/vaccinations/record')} className="text-xs text-brand hover:text-brand/80 font-medium flex items-center gap-1"><Syringe size={12} /> Record vaccination</button>
+            <button onClick={() => navigate(`/vaccinations/record?animalId=${animal.id}`)} className="text-xs text-brand hover:text-brand/80 font-medium flex items-center gap-1"><Syringe size={12} /> Record vaccination</button>
           </div>
           {animalVaccinations.length === 0 ? <p className="text-sm text-ink-secondary py-4 text-center">No vaccinations recorded</p> : (
             <div className="space-y-3">

@@ -185,7 +185,7 @@ function Layout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-64">
+      <div className="flex-1 min-w-0 lg:ml-64">
         {/* Top bar */}
         <header className="sticky top-0 z-20 bg-bg/80 backdrop-blur-sm border-b border-border">
           <div className="flex items-center justify-between px-4 py-3">
@@ -206,7 +206,7 @@ function Layout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-4 sm:p-6">
           {children}
         </main>
       </div>

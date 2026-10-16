@@ -687,10 +687,11 @@ export type DueVaccination = {
   nextDoseNumber: number;
   totalDoses: number;
   nextDueDate: string;
+  /** Null when dose 1 hasn't been given yet (due from enrollment). */
   lastVaccination: {
     date: string;
     vaccine: string;
-  };
+  } | null;
 }
 
 export interface VaccinationMetrics {
@@ -793,6 +794,10 @@ export const vaccinationApi = {
 
   getVaccinationMetrics: (params?: { zoneId?: string }) =>
     request<VaccinationMetrics>(`/vaccinations/metrics?${toQuery(params ?? {})}`),
+
+  /** Zones the current user can enroll and vaccinate in. */
+  getMyVaccinationZones: () =>
+    request<{ all: boolean; zoneIds: string[] }>('/vaccinations/my-zones'),
 };
 
 // Export the base request function for other API modules
