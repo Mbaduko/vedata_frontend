@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { CalendarCheck, Check, ChevronRight, MessageSquare, Phone, Plus } from 'lucide-react';
+import { CalendarCheck, Check, ChevronRight, MapPin, MessageSquare, Phone, Plus } from 'lucide-react';
+import { mapHref } from './useLiveLocation';
 import { formatShortDate } from '../../utils/protocolSchedule';
 import {
   daysBetween,
@@ -77,6 +78,21 @@ export default function RecordSuccess({
             <dd className="text-ink font-medium text-right break-all">{value}</dd>
           </div>
         ))}
+        <div className="flex justify-between gap-4 px-4 py-3">
+          <dt className="text-ink-secondary">Location</dt>
+          <dd className="text-right">
+            <a
+              href={mapHref(result.location)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-medium text-brand-text"
+            >
+              <MapPin size={14} aria-hidden />
+              {result.location.lat.toFixed(5)}, {result.location.lng.toFixed(5)}
+            </a>
+            <span className="block text-xs text-ink-secondary">±{result.location.accuracy} m</span>
+          </dd>
+        </div>
       </dl>
 
       <div className="flex gap-3 p-4 rounded-2xl bg-info-bg border border-info-border text-info-text">

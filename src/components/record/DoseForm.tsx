@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
   CalendarClock,
@@ -7,8 +7,8 @@ import {
   Info,
   Loader,
   MapPin,
+  MapPinOff,
   RefreshCw,
-  X,
 } from 'lucide-react';
 import {
   ApiError,
@@ -18,7 +18,6 @@ import {
 } from '../../services/api';
 import { formatShortDate } from '../../utils/protocolSchedule';
 import {
-  autoLocationEnabled,
   daysBetween,
   doseNoun,
   formatRelativeDays,
@@ -26,11 +25,11 @@ import {
   nextDueAfter,
   recentBatches,
   rememberBatch,
-  setAutoLocation,
   toDateInput,
   type EnrollmentDue,
 } from '../../utils/vaccinationRecord';
 import { DueBadge } from './AnimalHeader';
+import { useLiveLocation, WEAK_ACCURACY_M, type GeoFix, type GeoStatus } from './useLiveLocation';
 
 export interface RecordResult {
   vaccination: Vaccination;
@@ -40,6 +39,7 @@ export interface RecordResult {
   batch: string;
   dateGiven: Date;
   next: { date: Date; label: string } | null;
+  location: GeoFix;
 }
 
 interface DoseFormProps {
@@ -52,7 +52,7 @@ interface DoseFormProps {
 }
 
 type DateChoice = 'today' | 'yesterday' | 'other';
-type Field = 'vaccine' | 'batch' | 'date';
+type Field = 'vaccine' | 'batch' | 'date' | 'location';
 
 const NOTE_SUGGESTIONS = ['No reaction', 'Mild swelling at site', 'Animal was stressed', 'Owner told next date'];
 
@@ -100,8 +100,9 @@ export default function DoseForm({
   const [otherDate, setOtherDate] = useState('');
   const [notesOpen, setNotesOpen] = useState(false);
   const [notes, setNotes] = useState('');
-  const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
-  const [locationState, setLocationState] = useState<'idle' | 'locating' | 'error'>('idle');
+  const { fix: location, status: locationStatus, retry: retryLocation } = useLiveLocation();
+  /** Save was tapped before the first GPS fix — submit as soon as it lands. */
+  const [waitingForLocation, setWaitingForLocation] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<{ message: string; stale: boolean } | null>(null);
@@ -110,6 +111,7 @@ export default function DoseForm({
     vaccine: useRef<HTMLFieldSetElement>(null),
     batch: useRef<HTMLInputElement>(null),
     date: useRef<HTMLFieldSetElement>(null),
+    location: useRef<HTMLDivElement>(null),
   };
   const submittingRef = useRef(false);
 
@@ -126,6 +128,9 @@ export default function DoseForm({
   else if (dateValue > todayValue) errors.date = "The date can't be in the future";
   else if (minDateValue && dateValue < minDateValue)
     errors.date = `Can't be before the previous dose (${formatShortDate(due.previousDate!)})`;
+  // Only hard failures block outright; while searching, Save waits for the fix
+  if (!location && (locationStatus === 'denied' || locationStatus === 'unsupported' || locationStatus === 'insecure'))
+    errors.location = LOCATION_ERRORS[locationStatus];
 
   const next = dateGiven ? nextDueAfter(doses, due.doseNumber, dateGiven) : null;
   const daysEarly = dateGiven && due.doseNumber > 1 ? daysBetween(dateGiven, due.dueDate) : 0;
@@ -140,41 +145,6 @@ export default function DoseForm({
       root.scrollPaddingTop = '';
       root.scrollPaddingBottom = '';
     };
-  }, []);
-
-  // ─── Location ──────────────────────────────────────────────────
-  const captureLocation = () => {
-    if (!('geolocation' in navigator)) {
-      setLocationState('error');
-      return;
-    }
-    setLocationState('locating');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: Math.round(pos.coords.accuracy),
-        });
-        setLocationState('idle');
-        setAutoLocation(true);
-      },
-      () => setLocationState('error'),
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
-    );
-  };
-
-  // People who attached a location before get it automatically — but only
-  // when permission is already granted, so we never pop a prompt unasked.
-  useEffect(() => {
-    if (!autoLocationEnabled() || !navigator.permissions) return;
-    navigator.permissions
-      .query({ name: 'geolocation' })
-      .then((status) => {
-        if (status.state === 'granted') captureLocation();
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Handlers ──────────────────────────────────────────────────
@@ -196,19 +166,30 @@ export default function DoseForm({
     });
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (submittingRef.current) return;
+  const revealError = (field: Field) => {
+    setShowErrors(true);
+    fieldRefs[field].current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (field === 'batch') fieldRefs.batch.current?.focus({ preventScroll: true });
+  };
 
-    const firstError = (['vaccine', 'batch', 'date'] as Field[]).find((f) => errors[f]);
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (submittingRef.current || waitingForLocation) return;
+
+    const firstError = (['vaccine', 'batch', 'date', 'location'] as Field[]).find((f) => errors[f]);
     if (firstError) {
-      setShowErrors(true);
-      const el = fieldRefs[firstError].current;
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (firstError === 'batch') fieldRefs.batch.current?.focus({ preventScroll: true });
+      revealError(firstError);
       return;
     }
+    if (!location) {
+      // Still getting a fix: hold the save and send it the moment one arrives
+      setWaitingForLocation(true);
+      return;
+    }
+    void save(location);
+  };
 
+  const save = async (fix: GeoFix) => {
     submittingRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
@@ -220,8 +201,8 @@ export default function DoseForm({
         batchNumber: batch.trim(),
         dateAdministered: dateValue,
         notes: notes.trim() || undefined,
-        gpsLat: location?.lat,
-        gpsLng: location?.lng,
+        gpsLat: fix.lat,
+        gpsLng: fix.lng,
       });
       rememberBatch(vaccineId, batch.trim());
       onRecorded({
@@ -232,6 +213,7 @@ export default function DoseForm({
         batch: batch.trim(),
         dateGiven: dateGiven!,
         next,
+        location: fix,
       });
     } catch (err) {
       const status = err instanceof ApiError ? err.statusCode : -1;
@@ -247,6 +229,33 @@ export default function DoseForm({
       setSubmitting(false);
     }
   };
+
+  // Finish a save that was waiting on GPS (or explain why it can't)
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => {
+    if (!waitingForLocation) return;
+    if (location) {
+      setWaitingForLocation(false);
+      void saveRef.current(location);
+      return;
+    }
+    // "Unavailable" is often transient (cold GPS start) and the watch keeps
+    // trying, so only a hard failure ends the wait early.
+    const hardFailure =
+      locationStatus === 'denied' || locationStatus === 'unsupported' || locationStatus === 'insecure';
+    if (hardFailure) {
+      setWaitingForLocation(false);
+      revealError('location');
+      return;
+    }
+    const giveUp = setTimeout(() => {
+      setWaitingForLocation(false);
+      revealError('location');
+    }, 30_000);
+    return () => clearTimeout(giveUp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingForLocation, location, locationStatus]);
 
   const fieldError = (field: Field) =>
     showErrors && errors[field] ? (
@@ -466,8 +475,17 @@ export default function DoseForm({
         )}
       </fieldset>
 
-      {/* Optional extras */}
-      <div className="bg-card border border-border rounded-2xl divide-y divide-border">
+      {/* Location — required, captured automatically */}
+      <LocationField
+        ref={fieldRefs.location}
+        fix={location}
+        status={locationStatus}
+        onRetry={retryLocation}
+        error={showErrors ? errors.location : undefined}
+      />
+
+      {/* Notes (optional) */}
+      <div className="bg-card border border-border rounded-2xl">
         <div className="p-4">
           {notesOpen || notes ? (
             <>
@@ -508,54 +526,6 @@ export default function DoseForm({
           )}
         </div>
 
-        <div className="p-4 flex items-center gap-3 min-h-[76px]">
-          <MapPin
-            size={18}
-            aria-hidden
-            className={location ? 'text-success-text shrink-0' : 'text-ink-secondary shrink-0'}
-          />
-          <div className="flex-1 min-w-0 text-sm">
-            {location ? (
-              <>
-                <p className="font-medium text-ink">Location attached</p>
-                <p className="text-xs text-ink-secondary">Accurate to about {location.accuracy} m</p>
-              </>
-            ) : locationState === 'error' ? (
-              <>
-                <p className="font-medium text-ink">Location unavailable</p>
-                <p className="text-xs text-ink-secondary">Allow location access, or save without it.</p>
-              </>
-            ) : (
-              <>
-                <p className="font-medium text-ink">Location</p>
-                <p className="text-xs text-ink-secondary">Optional — proves where it was given</p>
-              </>
-            )}
-          </div>
-          {location ? (
-            <button
-              type="button"
-              onClick={() => {
-                setLocation(null);
-                setAutoLocation(false);
-              }}
-              aria-label="Remove location"
-              className="w-11 h-11 flex items-center justify-center rounded-xl text-ink-secondary hover:text-ink hover:bg-bg"
-            >
-              <X size={18} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={captureLocation}
-              disabled={locationState === 'locating'}
-              className="min-h-[44px] px-4 rounded-xl border border-border text-sm font-medium text-ink hover:border-brand-border disabled:opacity-60 inline-flex items-center gap-2"
-            >
-              {locationState === 'locating' && <Loader size={14} className="animate-spin" aria-hidden />}
-              {locationState === 'locating' ? 'Locating…' : locationState === 'error' ? 'Retry' : 'Add'}
-            </button>
-          )}
-        </div>
       </div>
 
       {/* What happens next */}
@@ -595,12 +565,16 @@ export default function DoseForm({
         )}
         <button
           type="submit"
-          disabled={submitting || vaccines.length === 0}
+          disabled={submitting || waitingForLocation || vaccines.length === 0}
           className="w-full h-14 flex items-center justify-center gap-2 rounded-2xl bg-brand text-on-brand text-base font-semibold shadow-md hover:bg-brand-hover active:scale-[0.99] transition disabled:opacity-60"
         >
           {submitting ? (
             <>
               <Loader size={20} className="animate-spin" aria-hidden /> Saving…
+            </>
+          ) : waitingForLocation ? (
+            <>
+              <Loader size={20} className="animate-spin" aria-hidden /> Getting location…
             </>
           ) : (
             <>
@@ -612,9 +586,102 @@ export default function DoseForm({
           <p className="mt-2 text-center text-xs text-ink-secondary truncate">
             {selectedVaccine.name} · Batch {batch.trim()} ·{' '}
             {dateChoice === 'other' ? formatShortDate(dateGiven) : dateChoice === 'today' ? 'Today' : 'Yesterday'}
+            {location ? ` · ±${location.accuracy} m` : ''}
           </p>
         )}
       </div>
     </form>
   );
 }
+
+const LOCATION_ERRORS: Record<GeoStatus, string> = {
+  locating: '',
+  ready: '',
+  denied: 'Location access is blocked. Allow location for this site, then tap Try again.',
+  unavailable: "Couldn't get a GPS fix. Move to open sky or turn on location, then tap Try again.",
+  unsupported: "This device can't share its location, so vaccinations can't be recorded on it.",
+  insecure: 'Location only works over a secure (https) connection. Ask your admin to fix the app link.',
+};
+
+interface LocationFieldProps {
+  fix: GeoFix | null;
+  status: GeoStatus;
+  onRetry: () => void;
+  error?: string;
+}
+
+/** Shows the live GPS fix that will be saved with the record. */
+const LocationField = forwardRef<HTMLDivElement, LocationFieldProps>(function LocationField(
+  { fix, status, onRetry, error },
+  ref,
+) {
+  const failed = !fix && status !== 'locating';
+  const canRetry = status === 'denied' || status === 'unavailable';
+  const weak = fix && fix.accuracy > WEAK_ACCURACY_M;
+
+  return (
+    <div
+      ref={ref}
+      aria-live="polite"
+      className={`p-4 bg-card border rounded-2xl ${
+        error ? 'border-danger-border' : failed ? 'border-warning-border' : 'border-border'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${
+            fix
+              ? 'bg-success-bg text-success-text'
+              : failed
+                ? 'bg-warning-bg text-warning-text'
+                : 'bg-muted-bg text-ink-secondary'
+          }`}
+        >
+          {fix ? (
+            <MapPin size={18} />
+          ) : failed ? (
+            <MapPinOff size={18} />
+          ) : (
+            <Loader size={18} className="animate-spin" />
+          )}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-ink">
+            {fix ? 'Location captured' : failed ? 'Location needed' : 'Getting your location…'}
+          </p>
+          <p className="text-xs text-ink-secondary">
+            {fix
+              ? `Accurate to about ${fix.accuracy} m · saved with this record`
+              : failed
+                ? 'Required to save — it shows where the vaccine was given'
+                : 'Saved with the record to show where the vaccine was given'}
+          </p>
+        </div>
+        {canRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="shrink-0 min-h-[44px] px-4 rounded-xl border border-border text-sm font-medium text-ink hover:border-brand-border"
+          >
+            Try again
+          </button>
+        )}
+      </div>
+      {weak && (
+        <p className="mt-3 text-xs text-warning-text">
+          Weak signal — the location will still be saved, but moving outside improves it.
+        </p>
+      )}
+      {failed && (
+        <p
+          id="location-error"
+          className={`mt-3 flex items-start gap-1.5 text-sm ${error ? 'text-danger-text' : 'text-warning-text'}`}
+        >
+          <AlertCircle size={14} aria-hidden className="shrink-0 mt-0.5" />
+          {LOCATION_ERRORS[status]}
+        </p>
+      )}
+    </div>
+  );
+});

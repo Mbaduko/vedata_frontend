@@ -226,7 +226,6 @@ const write = (key: string, value: unknown) => {
 
 const BATCH_KEY = 'vedata-record-batches';
 const RECENT_KEY = 'vedata-record-recent-animals';
-const LOCATION_KEY = 'vedata-record-auto-location';
 
 export interface BatchMemory {
   batch: string;
@@ -271,5 +270,3 @@ export const rememberAnimal = (animal: AnimalSummary) => {
   );
 };
 
-export const autoLocationEnabled = () => read<boolean>(LOCATION_KEY, false);
-export const setAutoLocation = (on: boolean) => write(LOCATION_KEY, on);
